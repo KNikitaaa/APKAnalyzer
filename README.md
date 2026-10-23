@@ -5,7 +5,7 @@
 показывает, что внутри, объясняет подозрительные признаки простыми словами и (в следующих версиях) выставляет
 объяснимую оценку риска и формирует отчёт с AI-объяснением.
 
-📄 Полный план продукта: [APK-AI-Analyzer-Product-Plan-RU.pdf](APK-AI-Analyzer-Product-Plan-RU.pdf)
+📄 Полный план продукта: [docs/pdf/APK-AI-Analyzer-Product-Plan-RU.pdf](docs/pdf/APK-AI-Analyzer-Product-Plan-RU.pdf)
 
 ## Демонстрация
 
@@ -15,7 +15,8 @@
 
 🎬 Полное видео (3,5 мин): [docs/pdf/APK-AI-Analyzer-demo.mp4](docs/pdf/APK-AI-Analyzer-demo.mp4) —
 анализ подозрительного APK и доказательства, PDF-отчёт в приложении, настройка AI, история, чистое приложение,
-настройки приватности. Видео записано автоматически на эмуляторе Android 16 на синтетических образцах из `samples/synthetic/`.
+настройки приватности. Видео записано автоматически скриптом [`tools/demo-record.ps1`](tools/demo-record.ps1)
+на эмуляторе Android 16 на синтетических образцах из `samples/synthetic/`.
 
 ---
 

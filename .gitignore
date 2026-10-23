@@ -1,0 +1,26 @@
+# Gradle / Android Studio
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Сборки и подписи
+*.apk
+*.aab
+*.jks
+*.keystore
+!core/src/test/resources/**
+
+# Системные
+.DS_Store
+Thumbs.db
+
+# Локальные артефакты проверки
+samples/**/*.apk
+
+tools/demo/
