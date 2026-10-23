@@ -22,5 +22,3 @@ Thumbs.db
 
 # Локальные артефакты проверки
 samples/**/*.apk
-
-tools/demo/
