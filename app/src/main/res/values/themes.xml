@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Оформление полностью задаётся Compose (ui/theme/AppTheme.kt); здесь — только окно до старта Compose. -->
+    <style name="Theme.ApkAnalyzer" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
+</resources>

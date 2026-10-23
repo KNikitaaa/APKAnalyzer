@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Через FileProvider отдаются только временные отчёты для «Поделиться». -->
+<paths>
+    <cache-path name="reports" path="reports/" />
+</paths>

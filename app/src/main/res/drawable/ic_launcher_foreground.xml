@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Щит с «лупой»: локальная проверка безопасности. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00D4D8"
+        android:pathData="M54,26 L76,34 L76,52 C76,66 66.5,77.5 54,82 C41.5,77.5 32,66 32,52 L32,34 Z" />
+    <path
+        android:fillColor="#0D1B2A"
+        android:pathData="M51,44 a8,8 0 1,0 0.01,0 Z M51,48 a4,4 0 1,1 -0.01,0 Z" />
+    <path
+        android:fillColor="#0D1B2A"
+        android:pathData="M56.5,57.5 L62.5,63.5 L60,66 L54,60 Z" />
+</vector>

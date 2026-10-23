@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">APK AI Analyzer</string>
+
+    <!-- Главная -->
+    <string name="home_title">Проверка APK</string>
+    <string name="home_subtitle">Выберите APK-файл — приложение разберёт его прямо на телефоне.</string>
+    <string name="home_pick_apk">Выбрать APK</string>
+    <string name="home_history">История анализов</string>
+    <string name="home_settings">Настройки AI и приватность</string>
+    <string name="home_safety_title">Безопасно и локально</string>
+    <string name="home_safety_body">Файл не устанавливается и не запускается. Анализ выполняется на устройстве. В сеть может уйти только краткий набор фактов для AI-объяснения — и только после вашего подтверждения.</string>
+    <string name="home_limits_title">Что проверяется сейчас</string>
+    <string name="home_limits_body">SHA-256, пакет и версии Android, разрешения, компоненты, подпись, чувствительные API, сетевые адреса, нативные библиотеки и упаковщики.</string>
+    <string name="home_stage_note">Оценка риска строится по прозрачным правилам: для каждой причины видно доказательство. По желанию можно получить объяснение от AI — только с вашего согласия и без отправки самого APK.</string>
+
+    <!-- Анализ -->
+    <string name="analysis_title">Анализ</string>
+    <string name="analysis_importing">Копирование файла во временную закрытую папку…</string>
+    <string name="analysis_cancel">Отменить</string>
+    <string name="analysis_cancelled">Анализ отменён</string>
+    <string name="analysis_back">Назад</string>
+    <string name="analysis_try_another">Выбрать другой файл</string>
+    <string name="analysis_rejected_title">Файл не принят к анализу</string>
+    <string name="analysis_error_title">Не удалось выполнить анализ</string>
+    <string name="analysis_retry">Повторить</string>
+    <string name="analysis_raw_title">Все найденные признаки</string>
+
+    <!-- Оценка риска -->
+    <string name="risk_score">Балл риска: %1$d из 100</string>
+    <string name="risk_rules_version">Правила %1$s · полнота анализа %2$d%%</string>
+    <string name="risk_evidence_title">Причины и доказательства (%1$d)</string>
+    <string name="risk_no_findings">Ни одно правило не сработало.</string>
+    <string name="risk_combination">связка признаков</string>
+    <string name="risk_mitigation">Смягчено: %1$s</string>
+    <string name="risk_rule_meta">%1$s · вес %2$d</string>
+    <string name="risk_confidence"> · уверенность %1$d%%</string>
+    <string name="a11y_expanded">раскрыто</string>
+    <string name="a11y_collapsed">свёрнуто, нажмите, чтобы увидеть доказательства</string>
+
+    <!-- Отчёт -->
+    <string name="report_recommendations">Что делать</string>
+    <string name="report_actions">Действия</string>
+    <string name="report_open_pdf">Открыть PDF-отчёт</string>
+    <string name="report_export_pdf">Сохранить PDF</string>
+    <string name="report_export_json">Сохранить JSON</string>
+    <string name="report_share">Поделиться PDF</string>
+    <string name="report_saved">Отчёт сохранён</string>
+    <string name="report_save_failed">Не удалось сохранить отчёт</string>
+    <string name="report_no_handler">На устройстве нет подходящего приложения для этого действия</string>
+    <string name="report_delete_file">Удалить файл APK</string>
+    <string name="report_delete_file_title">Удалить файл?</string>
+    <string name="report_delete_file_text">Файл «%1$s» будет удалён с устройства. Отчёт останется в истории.</string>
+    <string name="report_delete_confirm">Удалить</string>
+    <string name="report_cancel">Отмена</string>
+    <string name="report_file_deleted">Файл удалён</string>
+    <string name="report_file_delete_failed">Не удалось удалить файл</string>
+    <string name="report_uninstall_app">Удалить установленное приложение</string>
+    <string name="report_app_details">Открыть сведения о приложении</string>
+    <string name="report_installed_hint">Работает, если приложение с этим пакетом установлено. Удаление подтверждается в системном окне Android.</string>
+    <string name="report_limitations">Ограничения анализа</string>
+    <string name="report_file_section">Файл и версии</string>
+    <string name="report_file_name">Имя файла</string>
+    <string name="report_file_size">Размер</string>
+    <string name="report_date">Дата анализа</string>
+    <string name="report_versions">Версии</string>
+
+    <!-- Просмотр PDF -->
+    <string name="pdf_preview_title">PDF-отчёт</string>
+    <string name="pdf_preview_close">Закрыть</string>
+    <string name="pdf_preview_save">Сохранить PDF</string>
+    <string name="pdf_preview_share">Отправить</string>
+    <string name="pdf_preview_error">Не удалось показать PDF: %1$s</string>
+    <string name="pdf_preview_page">Страница %1$d из %2$d</string>
+
+    <!-- AI -->
+    <string name="ai_title">Объяснение AI</string>
+    <string name="ai_intro">AI может простыми словами объяснить находки, предположить поведение приложения и подсказать действия. Модель получит только краткие факты из отчёта — не APK. Оценку риска модель изменить не может.</string>
+    <string name="ai_request">Получить AI-объяснение</string>
+    <string name="ai_refresh">Обновить объяснение</string>
+    <string name="ai_running">Запрос к %1$s… Обычно это занимает до минуты.</string>
+    <string name="ai_needs_setup">Сначала добавьте AI-профиль: провайдер, модель и ваш API-ключ.</string>
+    <string name="ai_open_settings">Открыть настройки AI</string>
+    <string name="ai_badge">Сгенерировано моделью · %1$s · %2$s · не влияет на оценку</string>
+    <string name="ai_scenarios">Предполагаемое поведение</string>
+    <string name="ai_based_on">На основе: %1$s</string>
+    <string name="ai_uncertainty">Неопределённость: %1$s</string>
+    <string name="ai_actions">Что советует модель</string>
+    <string name="ai_findings">Пояснения к находкам</string>
+    <string name="ai_partial">Не все запросы к модели удались (%1$d) — показано то, что получено.</string>
+    <string name="ai_consent_title">Отправить факты в AI?</string>
+    <string name="ai_preview_title">Предпросмотр отправки</string>
+    <string name="ai_consent_destination">Куда: %1$s (%2$s, модель %3$s), по HTTPS с вашим API-ключом.</string>
+    <string name="ai_consent_what">Что уйдёт: вывод движка, сработавшие правила, категории разрешений, типы открытых компонентов, чувствительные API и до 20 коротких очищенных фрагментов строк.</string>
+    <string name="ai_consent_not_sent">Не уходит: сам APK, имя файла, SHA-256, пути и данные вашего устройства. Похожее на ключи, токены, почту и телефоны маскируется.</string>
+    <string name="ai_consent_json">Точные данные запроса (фрагментов: %1$d):</string>
+    <string name="ai_consent_agree">Я согласен(на) передавать такие данные выбранному AI-провайдеру</string>
+    <string name="ai_consent_dont_preview">Больше не показывать предпросмотр</string>
+    <string name="ai_send">Отправить</string>
+
+    <!-- Настройки -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_ai_profiles">AI-профили</string>
+    <string name="settings_ai_profiles_hint">Профиль — это провайдер, модель и ваш API-ключ. Ключ хранится только на телефоне в зашифрованном виде (Android Keystore) и не попадает в отчёты и журналы.</string>
+    <string name="settings_no_profiles">Профилей пока нет.</string>
+    <string name="settings_add_profile">Добавить профиль</string>
+    <string name="settings_edit">Изменить</string>
+    <string name="settings_delete_profile">Удалить профиль и ключ</string>
+    <string name="settings_new_profile">Новый AI-профиль</string>
+    <string name="settings_edit_profile">Изменить профиль</string>
+    <string name="settings_provider">Провайдер</string>
+    <string name="settings_profile_name">Название профиля</string>
+    <string name="settings_base_url">Адрес API</string>
+    <string name="settings_https_only">Разрешены только адреса https://</string>
+    <string name="settings_destination">Данные будут отправляться на: %1$s</string>
+    <string name="settings_api_key">API-ключ</string>
+    <string name="settings_key_saved">Ключ сохранён — оставьте пустым, чтобы не менять</string>
+    <string name="settings_key_hint">Ключ от аккаунта выбранного провайдера</string>
+    <string name="settings_model">Модель</string>
+    <string name="settings_test_connection">Проверить подключение</string>
+    <string name="settings_testing">Проверка…</string>
+    <string name="settings_test_hint">Проверка запрашивает только список моделей — данные APK не отправляются.</string>
+    <string name="settings_save">Сохранить</string>
+    <string name="settings_privacy">Приватность AI</string>
+    <string name="settings_always_preview">Предпросмотр перед отправкой</string>
+    <string name="settings_always_preview_hint">Показывать точные данные перед каждым запросом к AI</string>
+    <string name="settings_include_domains">Передавать домены и адреса</string>
+    <string name="settings_include_domains_hint">Иначе домены и IP заменяются на «&lt;домен&gt;» и «&lt;IP&gt;»</string>
+    <string name="settings_include_package">Передавать имя пакета</string>
+    <string name="settings_include_package_hint">Помогает модели узнать известное приложение</string>
+    <string name="settings_consent_given">Согласие на отправку фактов в AI дано.</string>
+    <string name="settings_consent_not_given">Согласие ещё не давалось — его спросят при первом запросе.</string>
+    <string name="settings_revoke_consent">Отозвать согласие</string>
+    <string name="settings_history">История</string>
+    <string name="settings_retention_hint">Как долго хранить отчёты на устройстве</string>
+    <string name="settings_retention_forever">Бессрочно</string>
+    <string name="settings_retention_30">30 дней</string>
+    <string name="settings_retention_90">90 дней</string>
+    <string name="settings_retention_365">1 год</string>
+
+    <!-- История -->
+    <string name="history_title">История анализов</string>
+    <string name="history_report_title">Отчёт из истории</string>
+    <string name="history_empty">Здесь появятся результаты проверок. Сами APK не сохраняются — только отчёты.</string>
+    <string name="history_clear">Очистить</string>
+    <string name="history_clear_title">Очистить историю?</string>
+    <string name="history_clear_text">Все сохранённые отчёты будут удалены с устройства.</string>
+    <string name="history_delete_item">Удалить отчёт</string>
+    <string name="history_missing">Отчёт не найден</string>
+</resources>
