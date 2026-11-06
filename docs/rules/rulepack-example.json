@@ -1,0 +1,10 @@
+{
+  "version": "2026.10.3",
+  "baseCatalog": "2026.10.2",
+  "createdAtMs": 1792764000000,
+  "notes": "Пример пакета: дополнительные доменные зоны и туннельные сервисы, которые используют для C2.",
+  "weightOverrides": {},
+  "disabledRules": [],
+  "suspiciousTlds": ["beauty", "bond", "buzz", "cc", "cf", "cfd", "click", "cyou", "ga", "gq", "hair", "icu", "link", "lol", "ml", "monster", "mov", "onion", "pw", "quest", "rest", "sbs", "su", "tk", "top", "work", "xyz", "zip"],
+  "dynamicDns": ["duckdns.org", "no-ip.", "ddns.net", "ngrok", "serveo.net", "dynu.", "hopto.org", "zapto.org", "trycloudflare.com", "loca.lt", "localtunnel.me", "pagekite.me"]
+}
