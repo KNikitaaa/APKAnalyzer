@@ -15,6 +15,7 @@ captures/
 *.jks
 *.keystore
 !core/src/test/resources/**
+!app/src/androidTest/assets/**
 
 # Системные
 .DS_Store
