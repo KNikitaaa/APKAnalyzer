@@ -5,8 +5,8 @@ import com.apkanalyzer.domain.model.RiskLevel
 
 /**
  * Итоговый отчёт в «готовом к показу» виде. Один и тот же документ используется для экрана результата,
- * истории (хранится как JSON), экспорта в JSON и PDF. Документ собирает само приложение из локальных
- * доказательств; AI (этап 4) может только добавить отдельно помеченное объяснение в [aiExplanation].
+ * истории (хранится как JSON), экспорта в JSON и PDF. Локальные доказательства собирает само приложение;
+ * внешняя репутация может уточнить итог, сохраняя [localRisk]. AI добавляет отдельно помеченное объяснение.
  */
 data class ReportDocument(
     val schemaVersion: Int = SCHEMA_VERSION,
@@ -25,15 +25,17 @@ data class ReportDocument(
     val aiExplanation: ReportAi? = null,
     /** Части split APK, проанализированные вместе с основным файлом (у установленных приложений). */
     val splits: List<ReportFile> = emptyList(),
-    /** Репутация по SHA-256 во внешнем сервисе (по запросу пользователя). Не влияет на [risk] и [findings]. */
+    /** Репутация по SHA-256 во внешнем сервисе (по запросу пользователя). */
     val reputation: com.apkanalyzer.reputation.HashReputation? = null,
+    /** Исходная локальная оценка, когда итоговый [risk] уточнён репутацией. */
+    val localRisk: ReportRisk? = null,
 ) {
     /** Название для заголовков: имя приложения из ресурсов, иначе пакет, иначе имя файла. */
     val title: String get() = app?.label?.takeIf { !it.startsWith("@") } ?: app?.packageName ?: file.name
 
     companion object {
-        /** v2 — структурированное AI-объяснение; v3 — части split APK и репутация по хешу. Отчёты v1–v2 читаются. */
-        const val SCHEMA_VERSION = 3
+        /** v2 — AI; v3 — split APK и репутация; v4 — итог с сохранением локальной оценки. Отчёты v1–v3 читаются. */
+        const val SCHEMA_VERSION = 4
     }
 }
 

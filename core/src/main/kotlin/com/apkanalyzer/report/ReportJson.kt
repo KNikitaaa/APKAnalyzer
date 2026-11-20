@@ -39,8 +39,8 @@ object ReportJson {
             JsonValue.Obj().put("packageName", it.packageName).put("versionName", it.versionName)
                 .put("versionCode", it.versionCode).put("minSdk", it.minSdk).put("targetSdk", it.targetSdk).put("label", it.label)
         })
-        .put("risk", JsonValue.Obj().put("level", d.risk.code.name).put("label", d.risk.labelRu).put("score", d.risk.score)
-            .put("reason", d.risk.reasonRu).put("coverage", round(d.risk.coverage)))
+        .put("risk", riskToJson(d.risk))
+        .put("localRisk", d.localRisk?.let(::riskToJson))
         .put("findings", JsonValue.Arr(d.findings.map { f ->
             JsonValue.Obj().put("ruleId", f.ruleId).put("title", f.titleRu).put("description", f.descriptionRu)
                 .put("category", f.categoryRu).put("combination", f.combination).put("baseWeight", f.baseWeight)
@@ -58,12 +58,23 @@ object ReportJson {
         .put("aiExplanation", d.aiExplanation?.let { aiToJson(it) })
         .put("reputation", d.reputation?.let { r ->
             JsonValue.Obj()
-                .put("note", "Внешняя репутация по SHA-256; не влияет на локальную оценку риска")
+                .put("note", "Внешняя репутация по SHA-256; локальная оценка сохранена отдельно")
                 .put("provider", r.provider).put("checkedAtMs", r.checkedAtMs).put("status", r.status.name)
                 .put("verdict", r.verdict.name).put("malicious", r.malicious).put("suspicious", r.suspicious)
                 .put("harmless", r.harmless).put("undetected", r.undetected).put("threatLabel", r.threatLabel)
-                .put("lastAnalysisMs", r.lastAnalysisMs).put("link", r.link)
+                .put("lastAnalysisMs", r.lastAnalysisMs).put("link", r.link).put("fileSha256", r.fileSha256)
         })
+
+    private fun riskToJson(risk: ReportRisk): JsonValue.Obj = JsonValue.Obj()
+        .put("level", risk.code.name).put("label", risk.labelRu).put("score", risk.score)
+        .put("reason", risk.reasonRu).put("coverage", round(risk.coverage))
+
+    private fun riskFromJson(risk: JsonValue.Obj): ReportRisk = ReportRisk(
+        code = RiskCode.parse(risk.str("level")),
+        score = risk.int("score") ?: 0,
+        reasonRu = risk.str("reason").orEmpty(),
+        coverage = (risk.double("coverage") ?: 0.0).toFloat(),
+    )
 
     private fun fileToJson(f: ReportFile): JsonValue.Obj =
         JsonValue.Obj().put("name", f.name).put("sizeBytes", f.sizeBytes).put("sha256", f.sha256)
@@ -135,18 +146,15 @@ object ReportJson {
                     threatLabel = o.str("threatLabel"),
                     lastAnalysisMs = o.long("lastAnalysisMs"),
                     link = o.str("link").orEmpty(),
+                    fileSha256 = o.str("fileSha256"),
                 )
             },
             splits = r.arr("splits").map { ReportFile(it.str("name").orEmpty(), it.long("sizeBytes") ?: 0L, it.str("sha256").orEmpty()) },
             app = r.obj("app")?.let {
                 ReportApp(it.str("packageName").orEmpty(), it.str("versionName"), it.long("versionCode"), it.int("minSdk"), it.int("targetSdk"), it.str("label"))
             },
-            risk = ReportRisk(
-                code = RiskCode.parse(risk.str("level")),
-                score = risk.int("score") ?: 0,
-                reasonRu = risk.str("reason").orEmpty(),
-                coverage = (risk.double("coverage") ?: 0.0).toFloat(),
-            ),
+            risk = riskFromJson(risk),
+            localRisk = r.obj("localRisk")?.let(::riskFromJson),
             findings = r.arr("findings").map { f ->
                 ReportFinding(
                     ruleId = f.str("ruleId").orEmpty(),

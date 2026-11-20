@@ -80,7 +80,7 @@
 
     <!-- Репутация по хешу -->
     <string name="reputation_title">Репутация по SHA-256</string>
-    <string name="reputation_intro">Можно узнать, знаком ли этот файл VirusTotal и что о нём думают антивирусы. Отправляется только хеш — не APK и не имя приложения. На локальную оценку это не влияет.</string>
+    <string name="reputation_intro">Можно узнать, знаком ли этот файл VirusTotal и что о нём думают антивирусы. Отправляется только SHA-256 — не APK и не имя приложения. Свежий результат может уточнить итоговый риск; локальная оценка сохраняется.</string>
     <string name="reputation_check">Проверить хеш в VirusTotal</string>
     <string name="reputation_recheck">Проверить ещё раз</string>
     <string name="reputation_running">Запрос к VirusTotal…</string>
@@ -92,7 +92,7 @@
     <string name="reputation_threat">Классификация: %1$s</string>
     <string name="reputation_meta">%1$s · проверено %2$s</string>
     <string name="reputation_last_scan">последнее сканирование %1$s</string>
-    <string name="reputation_separate">Внешний источник. Уровень риска выше рассчитан приложением локально и не меняется.</string>
+    <string name="reputation_separate">Внешний источник. Локальная оценка: %1$s (%2$d/100). Сильные локальные признаки не скрываются.</string>
     <string name="reputation_consent_title">Отправить хеш в VirusTotal?</string>
     <string name="reputation_consent_body">На %1$s уйдёт только SHA-256 файла (ниже). Сам APK, имя пакета и список приложений не отправляются.</string>
     <string name="reputation_consent_send">Отправить хеш</string>

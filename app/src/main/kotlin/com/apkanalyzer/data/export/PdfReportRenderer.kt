@@ -85,7 +85,8 @@ class PdfReportRenderer {
                     text("Считают вредоносным: ${rep.malicious}, подозрительным: ${rep.suspicious}, всего проверило: ${rep.engines}", body)
                 }
                 rep.threatLabel?.let { text("Классификация сервиса: $it", body) }
-                text("Внешний источник; на локальную оценку риска не влияет. ${rep.link}", small)
+                report.localRisk?.let { text("Локальная оценка: ${it.labelRu}, ${it.score}/100. Итог выше может учитывать репутацию.", small) }
+                text("Внешний источник; исходные локальные признаки сохранены. ${rep.link}", small)
             }
 
             report.aiExplanation?.let { ai ->

@@ -9,9 +9,16 @@ object Recommendations {
 
     fun forAssessment(risk: RiskAssessment): List<String> {
         val ids = risk.triggeredRuleIds.toSet()
-        val cats = risk.categoryScores.keys
+        val cats = risk.categoryScores.keys.mapTo(mutableSetOf()) { it.labelRu }
+        return forRisk(risk.level, ids, cats)
+    }
+
+    fun forReport(risk: ReportRisk, findings: List<ReportFinding>): List<String> =
+        forRisk(risk.level, findings.mapTo(mutableSetOf()) { it.ruleId }, findings.mapTo(mutableSetOf()) { it.categoryRu })
+
+    private fun forRisk(level: RiskLevel, ids: Set<String>, cats: Set<String>): List<String> {
         val out = mutableListOf<String>()
-        when (risk.level) {
+        when (level) {
             RiskLevel.High -> {
                 out += "Не устанавливайте этот APK."
                 out += "Если приложение уже установлено — удалите его (кнопка «Удалить установленное приложение»)."
@@ -21,7 +28,7 @@ object Recommendations {
                 if ("ACCESSIBILITY_SERVICE" in ids) {
                     out += "Отключите службу приложения в Настройки → Специальные возможности."
                 }
-                if (BehaviorCategory.SMS_CALLS in cats || "COMBO_OTP_INTERCEPT" in ids || "COMBO_BANKER_ACCESSIBILITY" in ids) {
+                if (BehaviorCategory.SMS_CALLS.labelRu in cats || "COMBO_OTP_INTERCEPT" in ids || "COMBO_BANKER_ACCESSIBILITY" in ids) {
                     out += "Если приложение было установлено, позвоните в банк по номеру с карты, заблокируйте подозрительные операции и смените пароли."
                 }
                 out += "Смените пароли от почты и аккаунтов, которые вводились на устройстве после установки."
@@ -44,7 +51,7 @@ object Recommendations {
                 out += "Явных угроз не найдено. Статический анализ не гарантирует безопасность — скачивайте приложения из проверенных источников."
             }
         }
-        if (risk.level != RiskLevel.High && "UNSIGNED" in ids) out += "APK без подписи Android не установит — вероятно, файл повреждён или это не готовое приложение."
+        if (level != RiskLevel.High && "UNSIGNED" in ids) out += "APK без подписи Android не установит — вероятно, файл повреждён или это не готовое приложение."
         return out.distinct()
     }
 }

@@ -12,13 +12,13 @@ enum class ReputationStatus { FOUND, NOT_FOUND }
 enum class ReputationVerdict(val labelRu: String) {
     MALICIOUS("Антивирусы считают файл вредоносным"),
     SUSPICIOUS("Отдельные антивирусы считают файл подозрительным"),
-    CLEAN("Антивирусы не нашли угроз"),
+    CLEAN("Обнаружений нет — это не подтверждение безопасности"),
     UNKNOWN("Файл с таким хешем сервису не известен"),
 }
 
 /**
  * Репутация файла по SHA-256 во внешнем сервисе. Отдельна от локальной оценки: не меняет
- * ни уровень риска, ни балл, ни доказательства — только показывается рядом с ними.
+ * Локальные доказательства сохраняются отдельно; репутация может уточнить итоговый вывод.
  */
 data class HashReputation(
     val provider: String,
@@ -33,6 +33,8 @@ data class HashReputation(
     val lastAnalysisMs: Long?,
     /** Ссылка на страницу файла в сервисе. */
     val link: String,
+    /** Хеш, для которого получен ответ. Старые отчёты могут не содержать это поле. */
+    val fileSha256: String? = null,
 ) {
     /** Сколько антивирусных движков дали ответ. */
     val engines: Int get() = malicious + suspicious + harmless + undetected
@@ -80,21 +82,23 @@ class VirusTotalSource(
         }
         val link = "$GUI/file/$sha256"
         return when (result.code) {
-            200 -> parse(result.body, link)
-            404 -> HashReputation(name, clock(), ReputationStatus.NOT_FOUND, 0, 0, 0, 0, null, null, link)
+            200 -> parse(result.body, link, sha256).copy(fileSha256 = sha256)
+            404 -> HashReputation(name, clock(), ReputationStatus.NOT_FOUND, 0, 0, 0, 0, null, null, link, sha256)
             401, 403 -> throw ReputationException("VirusTotal не принял API-ключ — проверьте его в настройках", fatal = true)
             429 -> throw ReputationException("Превышен лимит запросов VirusTotal (бесплатный ключ — 4 запроса в минуту и 500 в день). Попробуйте позже")
             else -> throw ReputationException("VirusTotal ответил ошибкой ${result.code}")
         }
     }
 
-    private fun parse(body: String, link: String): HashReputation {
+    private fun parse(body: String, link: String, requestedSha256: String): HashReputation {
         val root = try {
             Json.parse(body, maxLength = 4 * 1024 * 1024)
         } catch (e: JsonException) {
             throw ReputationException("Некорректный ответ VirusTotal")
         }
-        val attrs = root.obj("data")?.obj("attributes") ?: throw ReputationException("В ответе VirusTotal нет данных о файле")
+        val data = root.obj("data") ?: throw ReputationException("В ответе VirusTotal нет данных о файле")
+        if (data.str("id") != requestedSha256) throw ReputationException("VirusTotal вернул данные для другого SHA-256")
+        val attrs = data.obj("attributes") ?: throw ReputationException("В ответе VirusTotal нет данных о файле")
         val stats = attrs.obj("last_analysis_stats") ?: throw ReputationException("В ответе VirusTotal нет результатов проверки")
         fun count(key: String) = (stats.long(key) ?: 0L).coerceIn(0L, MAX_ENGINES).toInt()
         return HashReputation(

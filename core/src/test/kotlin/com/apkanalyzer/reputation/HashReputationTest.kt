@@ -3,6 +3,7 @@ package com.apkanalyzer.reputation
 import com.apkanalyzer.ai.AiTransport
 import com.apkanalyzer.ai.HttpResult
 import com.apkanalyzer.report.ReportJson
+import com.apkanalyzer.report.ReputationRiskFusion
 import com.apkanalyzer.testing.Fixtures
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -57,6 +58,7 @@ class HashReputationTest {
         assertEquals("trojan.smsthief/android", r.threatLabel)
         assertEquals(1_760_000_000_000L, r.lastAnalysisMs)
         assertEquals("https://www.virustotal.com/gui/file/$sha", r.link)
+        assertEquals(sha, r.fileSha256)
         assertEquals(ReputationVerdict.MALICIOUS, r.verdict)
     }
 
@@ -95,6 +97,10 @@ class HashReputationTest {
         // Отрицательные и нелепые значения не принимаются.
         val weird = vt(FakeTransport { _, _ -> HttpResult(200, found.replace("\"malicious\":12", "\"malicious\":-5")) }).lookup(sha)
         assertEquals(0, weird.malicious)
+        try {
+            vt(FakeTransport { _, _ -> HttpResult(200, found.replace("\"id\":\"$sha\"", "\"id\":\"${"0".repeat(64)}\"")) }).lookup(sha)
+            fail("принят ответ для другого SHA-256")
+        } catch (_: ReputationException) { }
     }
 
     @Test
@@ -115,18 +121,21 @@ class HashReputationTest {
     }
 
     @Test
-    fun reputationIsStoredInReportButDoesNotChangeRisk() {
+    fun reputationIsStoredWithOriginalLocalRisk() {
         val doc = com.apkanalyzer.testing.ApkSpec().let { spec ->
             val report = spec.report()
             com.apkanalyzer.report.ReportBuilder.build(report, com.apkanalyzer.rules.RiskEngine().assess(report), "0.6.0")
         }
-        val rep = vt(FakeTransport { _, _ -> HttpResult(200, found) }).lookup(doc.file.sha256.ifEmpty { sha })
-        val withRep = doc.copy(reputation = rep)
+        val response = found.replace("\"id\":\"$sha\"", "\"id\":\"${doc.file.sha256}\"")
+        val rep = vt(FakeTransport { _, _ -> HttpResult(200, response) }).lookup(doc.file.sha256)
+        val withRep = ReputationRiskFusion.apply(doc, rep)
         assertEquals(doc.risk, withRep.risk)
+        assertEquals(doc.risk, withRep.localRisk)
         val back = ReportJson.decode(ReportJson.encode(withRep))
         assertEquals(rep, back.reputation)
         assertEquals(doc.risk, back.risk)
-        assertTrue(ReportJson.encode(withRep).contains("не влияет на локальную оценку"))
+        assertEquals(doc.risk, back.localRisk)
+        assertTrue(ReportJson.encode(withRep).contains("локальная оценка сохранена отдельно"))
     }
 
     @Test

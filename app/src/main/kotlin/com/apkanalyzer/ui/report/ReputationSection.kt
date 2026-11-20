@@ -38,6 +38,7 @@ import com.apkanalyzer.report.ReportDocument
 import com.apkanalyzer.reputation.HashReputation
 import com.apkanalyzer.reputation.ReputationException
 import com.apkanalyzer.reputation.ReputationVerdict
+import com.apkanalyzer.report.ReputationRiskFusion
 import com.apkanalyzer.ui.theme.RiskColors
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,8 +74,7 @@ class ReputationViewModel(private val c: AppContainer) : ViewModel() {
         viewModelScope.launch {
             try {
                 val rep = c.reputation.lookup(doc.file.sha256)
-                // Локальная оценка не меняется: репутация хранится отдельным разделом отчёта.
-                val newDoc = doc.copy(reputation = rep)
+                val newDoc = ReputationRiskFusion.apply(doc, rep)
                 historyId?.let { id -> runCatching { c.history.update(id, newDoc) } }
                 _updated.value = newDoc
                 _state.value = ReputationUiState.Idle
@@ -112,7 +112,7 @@ fun ReputationCard(
                 IconBubble(R.drawable.ic_globe, tint = MaterialTheme.colorScheme.onSecondaryContainer, container = MaterialTheme.colorScheme.secondaryContainer, size = 36.dp)
                 SectionTitle(stringResource(R.string.reputation_title))
             }
-            doc.reputation?.let { rep -> ReputationResult(rep) } ?: Text(
+            doc.reputation?.let { rep -> ReputationResult(doc, rep) } ?: Text(
                 stringResource(R.string.reputation_intro),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -144,7 +144,7 @@ fun ReputationCard(
 }
 
 @Composable
-private fun ReputationResult(rep: HashReputation) {
+private fun ReputationResult(doc: ReportDocument, rep: HashReputation) {
     val color = when (rep.verdict) {
         ReputationVerdict.MALICIOUS -> RiskColors.High
         ReputationVerdict.SUSPICIOUS -> RiskColors.Attention
@@ -168,7 +168,8 @@ private fun ReputationResult(rep: HashReputation) {
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
-    Text(stringResource(R.string.reputation_separate), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val local = doc.localRisk ?: doc.risk
+    Text(stringResource(R.string.reputation_separate, local.labelRu, local.score), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
 @Composable

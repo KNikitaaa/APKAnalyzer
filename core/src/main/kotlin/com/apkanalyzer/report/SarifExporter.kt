@@ -82,7 +82,11 @@ object SarifExporter {
                 .put("coverage", doc.risk.coverage.toDouble())
                 .put("rulesVersion", doc.rulesVersion)
                 .put("analyzerVersion", doc.analyzerVersion)
-                .apply { doc.app?.packageName?.let { put("packageName", it) } })
+                .apply {
+                    doc.app?.packageName?.let { put("packageName", it) }
+                    doc.localRisk?.let { put("localRiskLevel", it.code.name).put("localRiskScore", it.score) }
+                    doc.reputation?.let { put("reputationProvider", it.provider).put("reputationMalicious", it.malicious).put("reputationSuspicious", it.suspicious) }
+                })
 
         return JsonValue.Obj()
             .put("\$schema", SCHEMA)
