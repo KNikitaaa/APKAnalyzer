@@ -74,7 +74,10 @@ class ReputationViewModel(private val c: AppContainer) : ViewModel() {
         viewModelScope.launch {
             try {
                 val rep = c.reputation.lookup(doc.file.sha256)
-                val newDoc = ReputationRiskFusion.apply(doc, rep)
+                val latest = historyId?.let { c.history.load(it) }?.takeIf {
+                    it.file.sha256 == doc.file.sha256 && it.generatedAtMs == doc.generatedAtMs
+                } ?: doc
+                val newDoc = ReputationRiskFusion.apply(latest, rep)
                 historyId?.let { id -> runCatching { c.history.update(id, newDoc) } }
                 _updated.value = newDoc
                 _state.value = ReputationUiState.Idle

@@ -18,8 +18,8 @@ interface AnalysisDao {
     @Insert
     suspend fun insert(entity: AnalysisEntity): Long
 
-    @Query("UPDATE analysis_history SET report_json = :json, ai_used = :aiUsed, ai_provider_name = :provider WHERE id = :id")
-    suspend fun updateReport(id: Long, json: String, aiUsed: Boolean, provider: String?)
+    @Query("UPDATE analysis_history SET report_json = :json, ai_used = :aiUsed, ai_provider_name = :provider, risk_level_ordinal = :riskLevel, risk_score = :riskScore WHERE id = :id")
+    suspend fun updateReport(id: Long, json: String, aiUsed: Boolean, provider: String?, riskLevel: Int, riskScore: Int)
 
     @Query("DELETE FROM analysis_history WHERE id = :id")
     suspend fun deleteById(id: Long)

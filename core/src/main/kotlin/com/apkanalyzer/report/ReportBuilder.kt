@@ -4,6 +4,7 @@ import com.apkanalyzer.analyzer.ApkAnalysisReport
 import com.apkanalyzer.analyzer.report.RawFeatureFormatter
 import com.apkanalyzer.rules.RiskAssessment
 import com.apkanalyzer.rules.RuleKind
+import com.apkanalyzer.rules.TrustedSigners
 
 object ReportBuilder {
 
@@ -38,5 +39,6 @@ object ReportBuilder {
         limitations = risk.limitations,
         sections = RawFeatureFormatter.format(report),
         splits = report.splits.map { ReportFile(it.name, it.sizeBytes, it.sha256) },
+        signerVerdict = TrustedSigners.check(report.manifest?.packageName, report.signature).verdict,
     )
 }

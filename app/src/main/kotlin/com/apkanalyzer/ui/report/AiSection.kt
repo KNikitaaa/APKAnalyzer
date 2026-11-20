@@ -103,6 +103,16 @@ private fun AiBadge(ai: ReportAi) {
 private fun AiExplanationBody(doc: ReportDocument, ai: ReportAi) {
     val titles = doc.findings.associate { it.ruleId to it.titleRu }
     ai.summary?.let { Text(it, style = MaterialTheme.typography.bodyLarge) }
+    ai.riskReview?.let { review ->
+        Text("Мнение AI об оценке: " + when (review.direction) {
+            "lower" -> "предлагает снизить"
+            "raise" -> "предлагает повысить"
+            else -> "оставить без изменений"
+        } + " · " + confidenceRu(review.confidence), style = MaterialTheme.typography.titleSmall)
+        Text(review.reasonRu, style = MaterialTheme.typography.bodyMedium)
+        Text("Основано на: " + review.ruleIds.joinToString { titles[it] ?: it },
+            style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     if (ai.scenarios.isNotEmpty()) {
         SubTitle(stringResource(R.string.ai_scenarios))
         ai.scenarios.forEach { s ->

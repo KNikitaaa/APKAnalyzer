@@ -105,6 +105,8 @@ fun AnalysisScreen(
                     historyId = state.historyId,
                     onDocChanged = onDocChanged,
                     onOpenSettings = onOpenSettings,
+                    autoVirusTotal = state.useVirusTotal,
+                    autoAi = state.useAi,
                 )
                 is AnalysisUiState.Rejected -> MessageContent(
                     title = stringResource(R.string.analysis_rejected_title),

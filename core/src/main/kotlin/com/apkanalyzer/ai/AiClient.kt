@@ -64,7 +64,7 @@ class AiClient(
             try {
                 ai = when (val part = request(type, facts)) {
                     is AiPart.Explain -> ai.copy(summary = part.summary, findingNotes = part.notes)
-                    is AiPart.Behavior -> ai.copy(scenarios = part.scenarios, uncertainty = part.uncertainty)
+                    is AiPart.Behavior -> ai.copy(scenarios = part.scenarios, uncertainty = part.uncertainty, riskReview = part.review)
                     is AiPart.Actions -> ai.copy(actions = part.actions)
                     is AiPart.Summary -> ai.copy(reportTitle = part.title, reportSummary = part.summary, reportSections = part.sections)
                 }

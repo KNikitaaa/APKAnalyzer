@@ -46,6 +46,7 @@ import com.apkanalyzer.R
 import com.apkanalyzer.domain.model.RiskLevel
 import com.apkanalyzer.report.ReportDocument
 import com.apkanalyzer.report.ReportFinding
+import com.apkanalyzer.rules.SignerVerdict
 import com.apkanalyzer.ui.components.AppCard
 import com.apkanalyzer.ui.components.ScoreDial
 import com.apkanalyzer.ui.components.SectionTitle
@@ -110,6 +111,14 @@ fun RiskCard(doc: ReportDocument) {
                 val chip = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                 Tag(stringResource(R.string.risk_rules_tag, doc.rulesVersion), MaterialTheme.colorScheme.onSurfaceVariant, chip)
                 Tag(stringResource(R.string.risk_coverage_tag, (risk.coverage * 100).toInt()), MaterialTheme.colorScheme.onSurfaceVariant, chip)
+            }
+            doc.localRisk?.takeIf { it != risk }?.let { local ->
+                Text("Локальная оценка: ${local.labelRu}, ${local.score}/100. Итог уточнён выбранными источниками.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (doc.signerVerdict == SignerVerdict.OFFICIAL) {
+                Text("Подпись APK проверена и совпадает с сертификатом разработчика из каталога.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

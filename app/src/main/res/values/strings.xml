@@ -16,6 +16,10 @@
     <string name="home_step2">Приложение разбирает его прямо на телефоне: разрешения, код, подпись, сетевые адреса.</string>
     <string name="home_step3">Вы получаете вердикт с доказательствами и подсказку, что делать дальше.</string>
     <string name="home_privacy">Проверка идёт на телефоне. В сеть уходит только то, что вы подтвердите: факты для AI или хеш для VirusTotal.</string>
+    <string name="home_sources_title">Источники для анализа</string>
+    <string name="home_sources_hint">Локальный анализ выполняется всегда. После него выбранные источники запросят подтверждение отправки данных.</string>
+    <string name="home_source_vt">VirusTotal — проверка SHA-256</string>
+    <string name="home_source_ai">Нейросеть — разбор находок</string>
     <string name="home_settings">Настройки</string>
 
     <!-- Анализ -->
@@ -137,7 +141,7 @@
 
     <!-- AI -->
     <string name="ai_title">Объяснение AI</string>
-    <string name="ai_intro">AI может простыми словами объяснить находки, предположить поведение приложения и подсказать действия. Модель получит только краткие факты из отчёта — не APK. Оценку риска модель изменить не может.</string>
+    <string name="ai_intro">AI объясняет находки и может предложить ограниченную поправку к оценке по существующим доказательствам. Модель получит только краткие факты из отчёта — не APK.</string>
     <string name="ai_request">Получить AI-объяснение</string>
     <string name="ai_refresh">Обновить объяснение</string>
     <string name="ai_running">Запрос к %1$s… Обычно это занимает до минуты.</string>

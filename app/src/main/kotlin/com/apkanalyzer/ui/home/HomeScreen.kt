@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,7 +33,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,8 +96,8 @@ class HomeViewModel(c: AppContainer) : ViewModel() {
 
 @Composable
 fun HomeScreen(
-    onApkPicked: (Uri) -> Unit,
-    onOpenInstalled: () -> Unit,
+    onApkPicked: (Uri, Boolean, Boolean) -> Unit,
+    onOpenInstalled: (Boolean, Boolean) -> Unit,
     onOpenHistory: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenReport: (Long) -> Unit,
@@ -101,13 +105,19 @@ fun HomeScreen(
     val app = LocalContext.current.applicationContext as ApkAnalyzerApp
     val vm: HomeViewModel = viewModel(factory = HomeViewModel.factory(app.container))
     val recent by vm.recent.collectAsStateWithLifecycle()
+    var useVirusTotal by rememberSaveable { mutableStateOf(false) }
+    var useAi by rememberSaveable { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) onApkPicked(uri)
+        if (uri != null) onApkPicked(uri, useVirusTotal, useAi)
     }
     HomeContent(
         recent = recent,
         onPickClick = { picker.launch(APK_MIME_TYPES) },
-        onInstalledClick = onOpenInstalled,
+        onInstalledClick = { onOpenInstalled(useVirusTotal, useAi) },
+        useVirusTotal = useVirusTotal,
+        onVirusTotalChange = { useVirusTotal = it },
+        useAi = useAi,
+        onAiChange = { useAi = it },
         onHistoryClick = onOpenHistory,
         onSettingsClick = onOpenSettings,
         onRecentClick = onOpenReport,
@@ -123,6 +133,10 @@ private fun HomeContent(
     onHistoryClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onRecentClick: (Long) -> Unit,
+    useVirusTotal: Boolean,
+    onVirusTotalChange: (Boolean) -> Unit,
+    useAi: Boolean,
+    onAiChange: (Boolean) -> Unit,
 ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -160,6 +174,22 @@ private fun HomeContent(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(4.dp))
+
+            AppCard {
+                Column(Modifier.padding(16.dp)) {
+                    SectionTitle(stringResource(R.string.home_sources_title))
+                    Text(stringResource(R.string.home_sources_hint), style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = useVirusTotal, onCheckedChange = onVirusTotalChange)
+                        Text(stringResource(R.string.home_source_vt), modifier = Modifier.clickable { onVirusTotalChange(!useVirusTotal) })
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = useAi, onCheckedChange = onAiChange)
+                        Text(stringResource(R.string.home_source_ai), modifier = Modifier.clickable { onAiChange(!useAi) })
+                    }
+                }
+            }
 
             ActionCard(
                 icon = R.drawable.ic_file,
@@ -279,6 +309,7 @@ private fun HowItWorks() {
 @Composable
 private fun HomePreview() {
     ApkAnalyzerTheme(darkTheme = false) {
-        HomeContent(recent = emptyList(), onPickClick = {}, onInstalledClick = {}, onHistoryClick = {}, onSettingsClick = {}, onRecentClick = {})
+        HomeContent(recent = emptyList(), onPickClick = {}, onInstalledClick = {}, onHistoryClick = {}, onSettingsClick = {}, onRecentClick = {},
+            useVirusTotal = false, onVirusTotalChange = {}, useAi = false, onAiChange = {})
     }
 }

@@ -7,11 +7,12 @@ import com.apkanalyzer.report.AiAction
 import com.apkanalyzer.report.AiFindingNote
 import com.apkanalyzer.report.AiScenario
 import com.apkanalyzer.report.AiSection
+import com.apkanalyzer.report.AiRiskReview
 
 /** Проверенный фрагмент ответа одного запроса. */
 sealed class AiPart {
     data class Explain(val summary: String, val notes: List<AiFindingNote>) : AiPart()
-    data class Behavior(val scenarios: List<AiScenario>, val uncertainty: String?) : AiPart()
+    data class Behavior(val scenarios: List<AiScenario>, val uncertainty: String?, val review: AiRiskReview? = null) : AiPart()
     data class Actions(val actions: List<AiAction>) : AiPart()
     data class Summary(val title: String?, val summary: String, val sections: List<AiSection>) : AiPart()
 }
@@ -48,7 +49,16 @@ object AiResponseValidator {
                     AiScenario(title, desc, conf, ids.distinct())
                 }.take(6)
                 if (obj["scenarios"] !is JsonValue.Arr) fail("нет поля scenarios")
-                AiPart.Behavior(scenarios, text(obj.str("uncertainty")))
+                val review = obj.obj("riskReview")?.let { v ->
+                    val direction = v.str("direction")?.lowercase()?.takeIf { it in setOf("lower", "raise", "keep") }
+                    val confidence = v.str("confidence")?.lowercase()?.takeIf { it in CONFIDENCE }
+                    val reason = text(v.str("reason"), 300)
+                    val ids = v.arr("evidenceRuleIds").mapNotNull { (it as? JsonValue.Str)?.value }
+                    if (direction != null && confidence != null && reason != null &&
+                        ids.isNotEmpty() && ids.all { it in allowedRuleIds })
+                        AiRiskReview(direction, confidence, ids.distinct().take(10), reason) else null
+                }
+                AiPart.Behavior(scenarios, text(obj.str("uncertainty")), review)
             }
             AiRequestType.RECOMMENDATIONS -> {
                 if (obj["actions"] !is JsonValue.Arr) fail("нет поля actions")

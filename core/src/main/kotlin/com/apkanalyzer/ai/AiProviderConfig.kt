@@ -54,7 +54,7 @@ data class AiProfileConfig(
 /** Отдельные версионируемые запросы (раздел плана «Специализированные AI-запросы»). */
 enum class AiRequestType(val promptVersion: String, val titleRu: String) {
     EXPLAIN_FINDINGS("v1", "Объяснение находок"),
-    INFER_BEHAVIOR("v1", "Предполагаемое поведение"),
+    INFER_BEHAVIOR("v2", "Предполагаемое поведение"),
     RECOMMENDATIONS("v1", "Рекомендации"),
     REPORT_SUMMARY("v1", "Текст отчёта"),
 }

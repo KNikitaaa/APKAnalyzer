@@ -20,12 +20,13 @@ object Routes {
     const val HOME = "home"
     const val HISTORY = "history"
     const val SETTINGS = "settings"
-    const val INSTALLED = "installed"
-    const val ANALYSIS = "analysis?${AnalysisViewModel.ARG_URI}={${AnalysisViewModel.ARG_URI}}&${AnalysisViewModel.ARG_PKG}={${AnalysisViewModel.ARG_PKG}}"
+    const val INSTALLED = "installed?vt={vt}&ai={ai}"
+    const val ANALYSIS = "analysis?${AnalysisViewModel.ARG_URI}={${AnalysisViewModel.ARG_URI}}&${AnalysisViewModel.ARG_PKG}={${AnalysisViewModel.ARG_PKG}}&vt={vt}&ai={ai}"
     const val REPORT = "report/{${SavedReportViewModel.ARG_ID}}"
 
-    fun analysis(uri: Uri) = "analysis?${AnalysisViewModel.ARG_URI}=${Uri.encode(uri.toString())}"
-    fun analysisInstalled(packageName: String) = "analysis?${AnalysisViewModel.ARG_PKG}=${Uri.encode(packageName)}"
+    fun analysis(uri: Uri, vt: Boolean, ai: Boolean) = "analysis?${AnalysisViewModel.ARG_URI}=${Uri.encode(uri.toString())}&vt=$vt&ai=$ai"
+    fun analysisInstalled(packageName: String, vt: Boolean, ai: Boolean) = "analysis?${AnalysisViewModel.ARG_PKG}=${Uri.encode(packageName)}&vt=$vt&ai=$ai"
+    fun installed(vt: Boolean, ai: Boolean) = "installed?vt=$vt&ai=$ai"
     fun report(id: Long) = "report/$id"
 }
 
@@ -35,8 +36,8 @@ fun AppNavHost() {
     NavHost(navController = nav, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
             HomeScreen(
-                onApkPicked = { uri -> nav.navigate(Routes.analysis(uri)) },
-                onOpenInstalled = { nav.navigate(Routes.INSTALLED) },
+                onApkPicked = { uri, vt, ai -> nav.navigate(Routes.analysis(uri, vt, ai)) },
+                onOpenInstalled = { vt, ai -> nav.navigate(Routes.installed(vt, ai)) },
                 onOpenHistory = { nav.navigate(Routes.HISTORY) },
                 onOpenSettings = { nav.navigate(Routes.SETTINGS) },
                 onOpenReport = { id -> nav.navigate(Routes.report(id)) },
@@ -47,12 +48,19 @@ fun AppNavHost() {
             arguments = listOf(
                 navArgument(AnalysisViewModel.ARG_URI) { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument(AnalysisViewModel.ARG_PKG) { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("vt") { type = NavType.BoolType; defaultValue = false },
+                navArgument("ai") { type = NavType.BoolType; defaultValue = false },
             ),
         ) {
             AnalysisRoute(onBack = { nav.popBackStack() }, onOpenSettings = { nav.navigate(Routes.SETTINGS) })
         }
-        composable(Routes.INSTALLED) {
-            InstalledAppsRoute(onBack = { nav.popBackStack() }, onAnalyze = { pkg -> nav.navigate(Routes.analysisInstalled(pkg)) })
+        composable(Routes.INSTALLED, arguments = listOf(
+            navArgument("vt") { type = NavType.BoolType; defaultValue = false },
+            navArgument("ai") { type = NavType.BoolType; defaultValue = false },
+        )) { entry ->
+            val vt = entry.arguments?.getBoolean("vt") ?: false
+            val ai = entry.arguments?.getBoolean("ai") ?: false
+            InstalledAppsRoute(onBack = { nav.popBackStack() }, onAnalyze = { pkg -> nav.navigate(Routes.analysisInstalled(pkg, vt, ai)) })
         }
         composable(Routes.HISTORY) {
             HistoryRoute(onBack = { nav.popBackStack() }, onOpen = { id -> nav.navigate(Routes.report(id)) })

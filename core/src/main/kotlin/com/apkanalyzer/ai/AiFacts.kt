@@ -42,6 +42,14 @@ object AiFactsBuilder {
                 .put("coverage", doc.risk.coverage.toDouble().let { Math.round(it * 100) / 100.0 })
                 .put("rulesVersion", doc.rulesVersion))
 
+        root.put("signerVerdict", doc.signerVerdict.name)
+        doc.reputation?.takeIf { it.fileSha256 == doc.file.sha256 }?.let { r ->
+            root.put("reputation", JsonValue.Obj()
+                .put("status", r.status.name).put("malicious", r.malicious).put("suspicious", r.suspicious)
+                .put("harmless", r.harmless).put("undetected", r.undetected)
+                .put("lastAnalysisMs", r.lastAnalysisMs))
+        }
+
         doc.app?.let { a ->
             val app = JsonValue.Obj().put("minSdk", a.minSdk).put("targetSdk", a.targetSdk)
             if (options.includePackageName) app.put("packageName", a.packageName).put("versionName", a.versionName?.take(40))

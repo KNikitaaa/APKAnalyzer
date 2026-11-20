@@ -3,6 +3,7 @@ package com.apkanalyzer.report
 import com.apkanalyzer.reputation.HashReputation
 import com.apkanalyzer.reputation.ReputationStatus
 import com.apkanalyzer.testing.ApkSpec
+import com.apkanalyzer.rules.SignerVerdict
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -66,5 +67,30 @@ class ReputationRiskFusionTest {
         assertThrows(IllegalArgumentException::class.java) {
             ReputationRiskFusion.apply(base, rep(sha256 = "0".repeat(64)))
         }
+    }
+
+    @Test fun officialSignatureAndZeroDetectionsLowerYouTubeLikeScore() {
+        val local = base.copy(risk = ReportRisk(RiskCode.ATTENTION, 55, "Возможности", 1f),
+            findings = emptyList(), signerVerdict = SignerVerdict.OFFICIAL)
+        val result = RiskFusion.withReputation(local, rep(undetected = 60))
+        assertEquals(RiskCode.LOW, result.risk.code)
+        assertEquals(24, result.risk.score)
+        assertEquals(55, result.localRisk!!.score)
+        assertEquals(result, ReportJson.decode(ReportJson.encode(result)))
+        assertEquals(RiskCode.ATTENTION, RiskFusion.withReputation(local.copy(signerVerdict = SignerVerdict.UNKNOWN), rep()).risk.code)
+    }
+
+    @Test fun aiAdjustmentIsBoundedAndIndependentOfSourceOrder() {
+        val finding = ReportFinding("CAMERA", "Камера", "", "Возможности", false, 10, 1f, 10f, emptyList(), emptyList())
+        val local = base.copy(risk = ReportRisk(RiskCode.ATTENTION, 55, "Возможности", 1f), findings = listOf(finding))
+        val ai = ReportAi("test", "model", now, emptyMap(), riskReview = AiRiskReview("lower", "high", listOf("CAMERA"), "Обычная функция"))
+        val onlyAi = RiskFusion.withAi(local, ai)
+        assertEquals(45, onlyAi.risk.score)
+        val firstVt = RiskFusion.withAi(RiskFusion.withReputation(local, rep(harmless = 20, undetected = 40)), ai)
+        val firstAi = RiskFusion.withReputation(onlyAi, rep(harmless = 20, undetected = 40))
+        assertEquals(firstVt.risk, firstAi.risk)
+        assertEquals(RiskCode.LOW, firstAi.risk.code)
+        val strong = local.copy(findings = listOf(finding.copy(ruleId = "AOSP_TEST_KEY")))
+        assertEquals(strong.risk, RiskFusion.withAi(strong, ai).risk)
     }
 }

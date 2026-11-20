@@ -41,6 +41,7 @@ object ReportJson {
         })
         .put("risk", riskToJson(d.risk))
         .put("localRisk", d.localRisk?.let(::riskToJson))
+        .put("signerVerdict", d.signerVerdict.name)
         .put("findings", JsonValue.Arr(d.findings.map { f ->
             JsonValue.Obj().put("ruleId", f.ruleId).put("title", f.titleRu).put("description", f.descriptionRu)
                 .put("category", f.categoryRu).put("combination", f.combination).put("baseWeight", f.baseWeight)
@@ -80,7 +81,7 @@ object ReportJson {
         JsonValue.Obj().put("name", f.name).put("sizeBytes", f.sizeBytes).put("sha256", f.sha256)
 
     private fun aiToJson(a: ReportAi): JsonValue.Obj = JsonValue.Obj()
-        .put("note", "Текст сгенерирован языковой моделью и не влияет на оценку риска")
+        .put("note", "Текст сгенерирован языковой моделью; структурированная рекомендация может ограниченно уточнить оценку")
         .put("provider", a.provider)
         .put("model", a.model)
         .put("generatedAtMs", a.generatedAtMs)
@@ -97,6 +98,10 @@ object ReportJson {
         .put("reportSummary", a.reportSummary)
         .put("reportSections", JsonValue.Arr(a.reportSections.map { JsonValue.Obj().put("heading", it.heading).put("text", it.text) }))
         .put("errors", JsonValue.Obj().also { o -> a.errors.forEach { (k, v) -> o.put(k, v) } })
+        .put("riskReview", a.riskReview?.let { v ->
+            JsonValue.Obj().put("direction", v.direction).put("confidence", v.confidence)
+                .put("ruleIds", JsonValue.Arr(v.ruleIds.map { JsonValue.Str(it) })).put("reason", v.reasonRu)
+        })
 
     private fun aiFromJson(o: JsonValue.Obj): ReportAi {
         fun strMap(key: String): Map<String, String> =
@@ -120,6 +125,10 @@ object ReportJson {
             reportSummary = o.str("reportSummary"),
             reportSections = o.arr("reportSections").map { AiSection(it.str("heading").orEmpty(), it.str("text").orEmpty()) },
             errors = strMap("errors"),
+            riskReview = o.obj("riskReview")?.let { v ->
+                AiRiskReview(v.str("direction").orEmpty(), v.str("confidence").orEmpty(),
+                    v.arr("ruleIds").mapNotNull { (it as? JsonValue.Str)?.value }, v.str("reason").orEmpty())
+            },
         )
     }
 
@@ -155,6 +164,8 @@ object ReportJson {
             },
             risk = riskFromJson(risk),
             localRisk = r.obj("localRisk")?.let(::riskFromJson),
+            signerVerdict = com.apkanalyzer.rules.SignerVerdict.entries.firstOrNull { it.name == r.str("signerVerdict") }
+                ?: com.apkanalyzer.rules.SignerVerdict.UNKNOWN,
             findings = r.arr("findings").map { f ->
                 ReportFinding(
                     ruleId = f.str("ruleId").orEmpty(),

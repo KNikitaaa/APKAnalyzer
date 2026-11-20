@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -84,6 +85,8 @@ fun ReportContent(
     historyId: Long?,
     onDocChanged: (ReportDocument) -> Unit,
     onOpenSettings: () -> Unit,
+    autoVirusTotal: Boolean = false,
+    autoAi: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val container = (LocalContext.current.applicationContext as ApkAnalyzerApp).container
@@ -101,8 +104,30 @@ fun ReportContent(
     val repState by repVm.state.collectAsStateWithLifecycle()
     val repUpdated by repVm.updated.collectAsStateWithLifecycle()
     LaunchedEffect(repUpdated) { repUpdated?.let(onDocChanged) }
+    var vtStarted by rememberSaveable(doc.file.sha256, doc.generatedAtMs) { mutableStateOf(false) }
+    var vtDismissed by rememberSaveable(doc.file.sha256, doc.generatedAtMs) { mutableStateOf(false) }
+    var aiStarted by rememberSaveable(doc.file.sha256, doc.generatedAtMs) { mutableStateOf(false) }
+    LaunchedEffect(autoVirusTotal, autoAi) {
+        if (autoVirusTotal && !vtStarted) {
+            vtStarted = true
+            repVm.request(doc)
+        } else if (!autoVirusTotal && autoAi && !aiStarted) {
+            aiStarted = true
+            aiVm.request(doc, historyId)
+        }
+    }
+    LaunchedEffect(repState, repUpdated, vtDismissed, autoAi) {
+        if (autoVirusTotal && autoAi && vtStarted && !aiStarted &&
+            (repUpdated != null || vtDismissed || repState is ReputationUiState.NeedsKey || repState is ReputationUiState.Failed)) {
+            aiStarted = true
+            aiVm.request(repUpdated ?: doc, historyId)
+        }
+    }
     (repState as? ReputationUiState.Confirm)?.let {
-        ReputationConsentDialog(sha256 = it.sha256, onSend = { repVm.confirm(doc, historyId) }, onDismiss = repVm::dismiss)
+        ReputationConsentDialog(sha256 = it.sha256, onSend = { repVm.confirm(doc, historyId) }, onDismiss = {
+            vtDismissed = true
+            repVm.dismiss()
+        })
     }
     (aiState as? AiUiState.Preview)?.let { preview ->
         AiConsentDialog(

@@ -35,6 +35,8 @@ sealed interface AnalysisUiState {
         val sourceUri: Uri?,
         /** ID записи в истории; null — сохранить не удалось. */
         val historyId: Long?,
+        val useVirusTotal: Boolean = false,
+        val useAi: Boolean = false,
     ) : AnalysisUiState
     data class Rejected(val reason: String) : AnalysisUiState
     data class Failed(val message: String) : AnalysisUiState
@@ -49,6 +51,8 @@ class AnalysisViewModel(
     /** Источник: выбранный файл или установленное приложение (этап 5). */
     private val uri: Uri? = savedStateHandle.get<String>(ARG_URI)?.let(Uri::parse)
     private val installedPackage: String? = savedStateHandle.get<String>(ARG_PKG)
+    private val useVirusTotal: Boolean = savedStateHandle.get<Boolean>("vt") ?: false
+    private val useAi: Boolean = savedStateHandle.get<Boolean>("ai") ?: false
 
     init {
         require(uri != null || installedPackage != null) { "Не передан ни файл, ни пакет" }
@@ -126,7 +130,7 @@ class AnalysisViewModel(
             } ?: return
             // История — необязательная часть: ошибка сохранения не должна скрывать результат.
             val historyId = runCatching { c.history.save(doc) }.getOrNull()
-            _state.value = AnalysisUiState.Done(doc, uri, historyId)
+            _state.value = AnalysisUiState.Done(doc, uri, historyId, useVirusTotal, useAi)
         } catch (e: AnalysisCancelledException) {
             _state.value = AnalysisUiState.Cancelled
         } catch (e: CancellationException) {

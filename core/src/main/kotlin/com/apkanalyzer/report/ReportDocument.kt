@@ -2,11 +2,12 @@ package com.apkanalyzer.report
 
 import com.apkanalyzer.analyzer.report.FeatureSection
 import com.apkanalyzer.domain.model.RiskLevel
+import com.apkanalyzer.rules.SignerVerdict
 
 /**
  * Итоговый отчёт в «готовом к показу» виде. Один и тот же документ используется для экрана результата,
  * истории (хранится как JSON), экспорта в JSON и PDF. Локальные доказательства собирает само приложение;
- * внешняя репутация может уточнить итог, сохраняя [localRisk]. AI добавляет отдельно помеченное объяснение.
+ * внешние источники могут уточнить итог, сохраняя [localRisk] и локальные доказательства.
  */
 data class ReportDocument(
     val schemaVersion: Int = SCHEMA_VERSION,
@@ -21,21 +22,23 @@ data class ReportDocument(
     val recommendations: List<String>,
     val limitations: List<String>,
     val sections: List<FeatureSection>,
-    /** Объяснение модели (этап 4). Не влияет на [risk] и [findings]. */
+    /** Объяснение и ограниченная рекомендация модели. Не меняет [findings]. */
     val aiExplanation: ReportAi? = null,
     /** Части split APK, проанализированные вместе с основным файлом (у установленных приложений). */
     val splits: List<ReportFile> = emptyList(),
     /** Репутация по SHA-256 во внешнем сервисе (по запросу пользователя). */
     val reputation: com.apkanalyzer.reputation.HashReputation? = null,
-    /** Исходная локальная оценка, когда итоговый [risk] уточнён репутацией. */
+    /** Исходная локальная оценка до уточнения внешними источниками. */
     val localRisk: ReportRisk? = null,
+    /** Результат криптографической проверки сертификата по встроенному каталогу. */
+    val signerVerdict: SignerVerdict = SignerVerdict.UNKNOWN,
 ) {
     /** Название для заголовков: имя приложения из ресурсов, иначе пакет, иначе имя файла. */
     val title: String get() = app?.label?.takeIf { !it.startsWith("@") } ?: app?.packageName ?: file.name
 
     companion object {
-        /** v2 — AI; v3 — split APK и репутация; v4 — итог с сохранением локальной оценки. Отчёты v1–v3 читаются. */
-        const val SCHEMA_VERSION = 4
+        /** v5 — проверенная подпись и структурированная рекомендация AI. Старые отчёты читаются. */
+        const val SCHEMA_VERSION = 5
     }
 }
 

@@ -2,7 +2,7 @@ package com.apkanalyzer.report
 
 /**
  * Объяснение языковой модели. Хранится отдельно от локальной оценки и всегда помечается как текст модели:
- * оно не может изменить категорию риска, балл или доказательства.
+ * структурированная рекомендация может ограниченно уточнить риск, но не локальные доказательства.
  */
 data class ReportAi(
     val provider: String,
@@ -20,10 +20,14 @@ data class ReportAi(
     val reportSections: List<AiSection> = emptyList(),
     /** Запросы, которые не удались (тип → причина). */
     val errors: Map<String, String> = emptyMap(),
+    val riskReview: AiRiskReview? = null,
 ) {
     val isEmpty: Boolean
-        get() = summary == null && findingNotes.isEmpty() && scenarios.isEmpty() && actions.isEmpty() && reportSummary == null
+        get() = summary == null && findingNotes.isEmpty() && scenarios.isEmpty() && actions.isEmpty() && reportSummary == null && riskReview == null
 }
+
+/** Мнение модели без права назначать произвольный балл. */
+data class AiRiskReview(val direction: String, val confidence: String, val ruleIds: List<String>, val reasonRu: String)
 
 data class AiFindingNote(val ruleId: String, val text: String)
 data class AiScenario(val title: String, val description: String, val confidence: String, val ruleIds: List<String>)

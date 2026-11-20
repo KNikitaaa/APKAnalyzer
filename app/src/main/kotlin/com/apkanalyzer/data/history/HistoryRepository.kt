@@ -46,7 +46,8 @@ class HistoryRepository(private val dao: AnalysisDao) {
 
     /** Обновляет сохранённый отчёт (например, после получения AI-объяснения). */
     suspend fun update(id: Long, doc: ReportDocument) = withContext(Dispatchers.IO) {
-        dao.updateReport(id, ReportJson.encode(doc, pretty = false), doc.aiExplanation != null, doc.aiExplanation?.provider)
+        dao.updateReport(id, ReportJson.encode(doc, pretty = false), doc.aiExplanation != null,
+            doc.aiExplanation?.provider, doc.risk.level.ordinal, doc.risk.score)
     }
 
     /** Удаляет записи старше [days] дней (0 — ничего не удаляет). */

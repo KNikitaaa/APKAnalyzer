@@ -9,6 +9,7 @@ import com.apkanalyzer.ai.AiFacts
 import com.apkanalyzer.ai.AiProfileConfig
 import com.apkanalyzer.di.AppContainer
 import com.apkanalyzer.report.ReportDocument
+import com.apkanalyzer.report.RiskFusion
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,8 +91,10 @@ class AiExplainViewModel(private val c: AppContainer) : ViewModel() {
                 _state.value = AiUiState.Failed(ai.errors.values.firstOrNull() ?: "Модель не вернула пригодного ответа")
                 return
             }
-            // Оценка риска и доказательства не меняются — добавляется только отдельное объяснение модели.
-            val newDoc = doc.copy(aiExplanation = ai)
+            val latest = historyId?.let { c.history.load(it) }?.takeIf {
+                it.file.sha256 == doc.file.sha256 && it.generatedAtMs == doc.generatedAtMs
+            } ?: doc
+            val newDoc = RiskFusion.withAi(latest, ai)
             historyId?.let { id -> runCatching { c.history.update(id, newDoc) } }
             _updated.value = newDoc
             _state.value = if (ai.errors.isEmpty()) AiUiState.Idle else AiUiState.Failed("Часть запросов не удалась: " + ai.errors.values.first())
