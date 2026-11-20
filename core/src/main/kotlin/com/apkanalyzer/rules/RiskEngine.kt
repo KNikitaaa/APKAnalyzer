@@ -55,7 +55,11 @@ class RiskEngine(
 
         // 2. Связки: из каждой группы должно сработать хотя бы одно правило
         for (rule in active.filter { it.kind == RuleKind.COMBINATION }) {
-            val parts = rule.requires.map { group -> group.mapNotNull { id -> hits[id]?.let { id to it } } }
+            // Простое переключение компонентов не доказывает скрытие значка. Для связок нужен
+            // вызов, связанный с собственной точкой входа в лаунчере, или старый DEX без атрибуции.
+            val parts = rule.requires.map { group -> group.mapNotNull { id ->
+                hits[id]?.takeIf { hit -> id != "HIDE_ICON_API" || hit.confidence >= 1f }?.let { id to it }
+            } }
             if (parts.any { it.isEmpty() }) continue
             val used = parts.flatten()
             hits[rule.id] = Hit(

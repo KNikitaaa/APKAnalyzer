@@ -115,9 +115,11 @@ class CalibrationTest {
         // Компонент-приёмник в манифесте, но код ссылается только на него — не на иконку.
         val r = ApkSpec(
             components = listOf(component("receiver", ".Boot", actions = listOf("android.intent.action.BOOT_COMPLETED"))),
-            permissions = listOf("INTERNET", "RECEIVE_BOOT_COMPLETED"),
+            permissions = listOf("INTERNET", "RECEIVE_BOOT_COMPLETED", "RECORD_AUDIO"),
             code = mapOf("Lcom/example/sample/Toggle;" to listOf(hideIcon, Insn.ConstClass("Lcom/example/sample/Boot;"))),
         ).assess()
-        assertEquals(0.4f, r.matches.single { it.ruleId == "COMBO_STEALTH_PERSISTENCE" }.confidence, 0.001f)
+        assertEquals(0.4f, r.matches.single { it.ruleId == "HIDE_ICON_API" }.confidence, 0.001f)
+        assertFalse("COMBO_STEALTH_PERSISTENCE" in r.triggeredRuleIds)
+        assertFalse("COMBO_SPYWARE" in r.triggeredRuleIds)
     }
 }

@@ -31,7 +31,7 @@ import com.apkanalyzer.rules.BehaviorCategory.SURVEILLANCE
  * Любое изменение правил или весов обязано менять VERSION — это записывается в отчёт.
  */
 object RuleCatalog {
-    const val VERSION = "2026.10.2"
+    const val VERSION = "2026.11.1"
 
     private fun hit(evidence: List<Evidence>, confidence: Float = 1f): Hit? =
         if (evidence.isEmpty()) null else Hit(evidence, confidence)
@@ -110,7 +110,7 @@ object RuleCatalog {
         signal("NO_LAUNCHER_ICON", "Нет иконки в меню", "У приложения нет значка для запуска — пользователь может не знать, что оно установлено.", PERSISTENCE, 10) { f ->
             if (f.manifest != null && !f.hasLauncher) Hit(listOf(Evidence(MANIFEST, "нет activity с MAIN + LAUNCHER"))) else null
         },
-        signal("HIDE_ICON_API", "Скрытие значка из кода", "Код умеет отключать свои компоненты — так обычно прячут иконку после первого запуска.", PERSISTENCE, 6) { f ->
+        signal("HIDE_ICON_API", "Переключение компонентов", "Код включает или отключает компоненты; если это значок запуска, приложение может скрыть его.", PERSISTENCE, 6) { f ->
             val usages = f.apis(ApiCategory.HIDE_ICON)
             if (usages.isEmpty()) return@signal null
             // Сильный признак — код ссылается на собственную точку входа из лаунчера. Включение и отключение

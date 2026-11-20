@@ -38,14 +38,24 @@ class LibraryCodeRulesTest {
     }
 
     @Test
-    fun sameBehaviourInAppCodeStillCounts() {
+    fun unrelatedComponentSwitchDoesNotCountAsHiding() {
         val r = workManagerApp(
             extraCode = mapOf("Lcom/example/sample/Hider;" to listOf(hideIcon)),
             components = listOf(component("receiver", ".BootReceiver", actions = listOf(boot))),
         )
         assertTrue("HIDE_ICON_API" in r.triggeredRuleIds)
         assertTrue("BOOT_AUTOSTART" in r.triggeredRuleIds)
+        assertFalse("COMBO_STEALTH_PERSISTENCE" in r.triggeredRuleIds)
+    }
+
+    @Test
+    fun disablingOwnLauncherStillCountsAsHiding() {
+        val r = workManagerApp(
+            extraCode = mapOf("Lcom/example/sample/Hider;" to listOf(hideIcon, Insn.ConstClass(main))),
+            components = listOf(component("receiver", ".BootReceiver", actions = listOf(boot))),
+        )
         assertTrue("COMBO_STEALTH_PERSISTENCE" in r.triggeredRuleIds)
+        assertTrue("COMBO_SPYWARE" in r.triggeredRuleIds)
     }
 
     @Test
