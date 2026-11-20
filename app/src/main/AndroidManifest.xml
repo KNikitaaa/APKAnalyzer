@@ -3,14 +3,33 @@
   Анализ APK полностью локальный. Сеть используется ТОЛЬКО для AI-объяснения (этап 4): после явного согласия
   пользователя, только по HTTPS и только к адресу выбранного им провайдера; уходит JSON с фактами, не APK.
   Файлы выбираются через системный диалог (Storage Access Framework) — разрешения на хранилище не нужны.
+  Установленные приложения только читаются: их APK доступны на чтение без дополнительных разрешений.
 -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Только для AI-объяснения по согласию пользователя. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Только для открытия системного диалога удаления приложения (пользователь подтверждает сам). -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+
+    <!--
+      Package visibility (Android 11+): проверка установленных приложений — основная функция антивирусного
+      сканера, поэтому нужен полный список пакетов. Для публикации в Google Play требуется декларация
+      (см. docs/play/QUERY_ALL_PACKAGES.md). Без этого разрешения работает запасной вариант из <queries>:
+      видны приложения с иконкой в лаунчере.
+    -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
 
     <application
         android:name=".ApkAnalyzerApp"

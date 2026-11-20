@@ -40,6 +40,19 @@ class ReportTest {
     }
 
     @Test
+    fun splitPartsAreListedInJsonWithHashes() {
+        val split = tempApk(com.apkanalyzer.testing.ApkBuilder.zip(listOf("classes.dex" to com.apkanalyzer.testing.DexWriter.write())))
+        val report = (ApkAnalyzer().analyze(tempApk(Fixtures.cleanApk()), "base.apk", splits = listOf(split)) as AnalysisOutcome.Completed).report
+        val doc = ReportBuilder.build(report, RiskEngine().assess(report), appVersion = "0.2.0")
+
+        assertEquals(split.name, doc.splits.single().name)
+        assertEquals(64, doc.splits.single().sha256.length)
+        val json = Json.parse(ReportJson.encode(doc)) as JsonValue.Obj
+        assertEquals(64, json.arr("splits").single().str("sha256")!!.length)
+        assertEquals(doc.splits, ReportJson.decode(ReportJson.encode(doc)).splits)
+    }
+
+    @Test
     fun jsonContainsReproducibilityFields() {
         val json = Json.parse(ReportJson.encode(document(Fixtures.suspiciousApk()))) as JsonValue.Obj
         assertEquals(ReportJson.FORMAT, json.str("format"))

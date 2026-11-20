@@ -1,5 +1,7 @@
 package com.apkanalyzer.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -18,8 +20,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -36,6 +36,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -51,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apkanalyzer.ApkAnalyzerApp
 import com.apkanalyzer.R
+import com.apkanalyzer.ui.components.AppCard
 import com.apkanalyzer.ai.AiProfileConfig
 import com.apkanalyzer.ai.AiProviderType
 import com.apkanalyzer.data.settings.AppSettings
@@ -138,6 +142,59 @@ private fun SettingsContent(s: AppSettings, vm: SettingsViewModel) {
             }
         }
         item {
+            val saved by vm.vtKeySaved.collectAsStateWithLifecycle()
+            var key by remember { mutableStateOf("") }
+            SettingsCard(stringResource(R.string.settings_reputation)) {
+                Text(stringResource(R.string.settings_reputation_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    stringResource(if (saved) R.string.settings_reputation_key_saved else R.string.settings_reputation_key_missing),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                OutlinedTextField(
+                    value = key,
+                    onValueChange = { key = it.trim() },
+                    label = { Text(stringResource(R.string.settings_reputation_key)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(onClick = { vm.saveVtKey(key); key = "" }, enabled = key.isNotBlank(), modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_reputation_save))
+                    }
+                    if (saved) {
+                        OutlinedButton(onClick = vm::removeVtKey, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.settings_reputation_remove)) }
+                    }
+                }
+            }
+        }
+        item {
+            val status by vm.rulePack.collectAsStateWithLifecycle()
+            val message by vm.rulePackMessage.collectAsStateWithLifecycle()
+            val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::installRulePack) }
+            SettingsCard(stringResource(R.string.settings_rules)) {
+                val pack = status.pack
+                Text(
+                    if (pack == null) stringResource(R.string.settings_rules_builtin, status.rulesVersion)
+                    else stringResource(R.string.settings_rules_pack, pack.version, status.rulesVersion),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                pack?.notes?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                status.problem?.let {
+                    Text(stringResource(R.string.settings_rules_problem, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                }
+                Text(stringResource(R.string.settings_rules_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(onClick = { picker.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_rules_load)) }
+                if (pack != null) {
+                    OutlinedButton(onClick = vm::resetRulePack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.settings_rules_reset)) }
+                }
+                message?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+            }
+        }
+        item {
             SettingsCard(stringResource(R.string.settings_history)) {
                 Text(stringResource(R.string.settings_retention_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 listOf(0 to R.string.settings_retention_forever, 30 to R.string.settings_retention_30, 90 to R.string.settings_retention_90, 365 to R.string.settings_retention_365)
@@ -160,7 +217,7 @@ private fun SettingsContent(s: AppSettings, vm: SettingsViewModel) {
 
 @Composable
 private fun SettingsCard(title: String, content: @Composable () -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    AppCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
             content()
@@ -261,4 +318,3 @@ private fun ProfileEditorDialog(d: ProfileDraft, vm: SettingsViewModel) {
         dismissButton = { TextButton(onClick = vm::closeEditor) { Text(stringResource(R.string.report_cancel)) } },
     )
 }
-

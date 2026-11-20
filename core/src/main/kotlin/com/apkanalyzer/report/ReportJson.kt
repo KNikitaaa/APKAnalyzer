@@ -33,10 +33,11 @@ object ReportJson {
         .put("appVersion", d.appVersion)
         .put("analyzerVersion", d.analyzerVersion)
         .put("rulesVersion", d.rulesVersion)
-        .put("file", JsonValue.Obj().put("name", d.file.name).put("sizeBytes", d.file.sizeBytes).put("sha256", d.file.sha256))
+        .put("file", fileToJson(d.file))
+        .put("splits", JsonValue.Arr(d.splits.map(::fileToJson)))
         .put("app", d.app?.let {
             JsonValue.Obj().put("packageName", it.packageName).put("versionName", it.versionName)
-                .put("versionCode", it.versionCode).put("minSdk", it.minSdk).put("targetSdk", it.targetSdk)
+                .put("versionCode", it.versionCode).put("minSdk", it.minSdk).put("targetSdk", it.targetSdk).put("label", it.label)
         })
         .put("risk", JsonValue.Obj().put("level", d.risk.code.name).put("label", d.risk.labelRu).put("score", d.risk.score)
             .put("reason", d.risk.reasonRu).put("coverage", round(d.risk.coverage)))
@@ -55,6 +56,17 @@ object ReportJson {
             }))
         }))
         .put("aiExplanation", d.aiExplanation?.let { aiToJson(it) })
+        .put("reputation", d.reputation?.let { r ->
+            JsonValue.Obj()
+                .put("note", "Внешняя репутация по SHA-256; не влияет на локальную оценку риска")
+                .put("provider", r.provider).put("checkedAtMs", r.checkedAtMs).put("status", r.status.name)
+                .put("verdict", r.verdict.name).put("malicious", r.malicious).put("suspicious", r.suspicious)
+                .put("harmless", r.harmless).put("undetected", r.undetected).put("threatLabel", r.threatLabel)
+                .put("lastAnalysisMs", r.lastAnalysisMs).put("link", r.link)
+        })
+
+    private fun fileToJson(f: ReportFile): JsonValue.Obj =
+        JsonValue.Obj().put("name", f.name).put("sizeBytes", f.sizeBytes).put("sha256", f.sha256)
 
     private fun aiToJson(a: ReportAi): JsonValue.Obj = JsonValue.Obj()
         .put("note", "Текст сгенерирован языковой моделью и не влияет на оценку риска")
@@ -110,8 +122,24 @@ object ReportJson {
             analyzerVersion = r.str("analyzerVersion").orEmpty(),
             rulesVersion = r.str("rulesVersion").orEmpty(),
             file = ReportFile(file.str("name").orEmpty(), file.long("sizeBytes") ?: 0L, file.str("sha256").orEmpty()),
+            reputation = r.obj("reputation")?.let { o ->
+                com.apkanalyzer.reputation.HashReputation(
+                    provider = o.str("provider").orEmpty(),
+                    checkedAtMs = o.long("checkedAtMs") ?: 0L,
+                    status = runCatching { com.apkanalyzer.reputation.ReputationStatus.valueOf(o.str("status").orEmpty()) }
+                        .getOrDefault(com.apkanalyzer.reputation.ReputationStatus.NOT_FOUND),
+                    malicious = o.int("malicious") ?: 0,
+                    suspicious = o.int("suspicious") ?: 0,
+                    harmless = o.int("harmless") ?: 0,
+                    undetected = o.int("undetected") ?: 0,
+                    threatLabel = o.str("threatLabel"),
+                    lastAnalysisMs = o.long("lastAnalysisMs"),
+                    link = o.str("link").orEmpty(),
+                )
+            },
+            splits = r.arr("splits").map { ReportFile(it.str("name").orEmpty(), it.long("sizeBytes") ?: 0L, it.str("sha256").orEmpty()) },
             app = r.obj("app")?.let {
-                ReportApp(it.str("packageName").orEmpty(), it.str("versionName"), it.long("versionCode"), it.int("minSdk"), it.int("targetSdk"))
+                ReportApp(it.str("packageName").orEmpty(), it.str("versionName"), it.long("versionCode"), it.int("minSdk"), it.int("targetSdk"), it.str("label"))
             },
             risk = ReportRisk(
                 code = RiskCode.parse(risk.str("level")),

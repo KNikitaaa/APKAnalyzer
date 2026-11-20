@@ -23,12 +23,17 @@ data class ReportDocument(
     val sections: List<FeatureSection>,
     /** Объяснение модели (этап 4). Не влияет на [risk] и [findings]. */
     val aiExplanation: ReportAi? = null,
+    /** Части split APK, проанализированные вместе с основным файлом (у установленных приложений). */
+    val splits: List<ReportFile> = emptyList(),
+    /** Репутация по SHA-256 во внешнем сервисе (по запросу пользователя). Не влияет на [risk] и [findings]. */
+    val reputation: com.apkanalyzer.reputation.HashReputation? = null,
 ) {
-    val title: String get() = app?.packageName ?: file.name
+    /** Название для заголовков: имя приложения из ресурсов, иначе пакет, иначе имя файла. */
+    val title: String get() = app?.label?.takeIf { !it.startsWith("@") } ?: app?.packageName ?: file.name
 
     companion object {
-        /** v2 — структурированное AI-объяснение. Отчёты v1 читаются. */
-        const val SCHEMA_VERSION = 2
+        /** v2 — структурированное AI-объяснение; v3 — части split APK и репутация по хешу. Отчёты v1–v2 читаются. */
+        const val SCHEMA_VERSION = 3
     }
 }
 
@@ -40,6 +45,8 @@ data class ReportApp(
     val versionCode: Long?,
     val minSdk: Int?,
     val targetSdk: Int?,
+    /** Название приложения (android:label, из resources.arsc). */
+    val label: String? = null,
 )
 
 enum class RiskCode(val level: RiskLevel) {

@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.core.content.FileProvider
 import com.apkanalyzer.report.ReportDocument
 import com.apkanalyzer.report.ReportJson
+import com.apkanalyzer.report.SarifExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -13,6 +14,8 @@ import java.io.File
 enum class ExportFormat(val mime: String, val extension: String) {
     PDF("application/pdf", "pdf"),
     JSON("application/json", "json"),
+    /** SARIF 2.1.0 — для GitHub Code Scanning, DefectDojo, SIEM/SOC. */
+    SARIF("application/sarif+json", "sarif"),
 }
 
 /** Сохранение отчёта в выбранный пользователем файл (SAF) и отправка через «Поделиться». */
@@ -56,6 +59,7 @@ class ReportExporter(private val context: Context) {
         when (format) {
             ExportFormat.PDF -> PdfReportRenderer().render(doc, out)
             ExportFormat.JSON -> out.write(ReportJson.encode(doc).toByteArray(Charsets.UTF_8))
+            ExportFormat.SARIF -> out.write(SarifExporter.encode(doc).toByteArray(Charsets.UTF_8))
         }
     }
 }

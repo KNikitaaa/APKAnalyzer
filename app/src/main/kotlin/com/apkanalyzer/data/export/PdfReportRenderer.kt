@@ -78,6 +78,16 @@ class PdfReportRenderer {
                 report.limitations.forEach { text("• $it", body) }
             }
 
+            report.reputation?.let { rep ->
+                heading("Репутация по SHA-256 (${rep.provider})")
+                text(rep.verdict.labelRu, paint(11f, bold = true))
+                if (rep.verdict != com.apkanalyzer.reputation.ReputationVerdict.UNKNOWN) {
+                    text("Считают вредоносным: ${rep.malicious}, подозрительным: ${rep.suspicious}, всего проверило: ${rep.engines}", body)
+                }
+                rep.threatLabel?.let { text("Классификация сервиса: $it", body) }
+                text("Внешний источник; на локальную оценку риска не влияет. ${rep.link}", small)
+            }
+
             report.aiExplanation?.let { ai ->
                 heading("Объяснение AI (${ai.provider}, ${ai.model})")
                 text("Текст сгенерирован языковой моделью по фактам локального анализа и не влияет на оценку риска.", small)

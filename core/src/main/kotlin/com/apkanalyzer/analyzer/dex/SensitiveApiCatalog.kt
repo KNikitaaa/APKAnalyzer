@@ -1,8 +1,12 @@
 package com.apkanalyzer.analyzer.dex
 
-/** Поведенческая категория чувствительного Android API. */
-enum class ApiCategory(val labelRu: String) {
-    SMS("Отправка/чтение SMS"),
+/**
+ * Поведенческая категория чувствительного Android API.
+ * [countsInLibraries] — вызов учитывается даже из «библиотечного» пакета: легальные библиотеки так почти
+ * не делают, а вредонос может назвать свой пакет `com.google.android.gms.*`, чтобы спрятаться за фильтром.
+ */
+enum class ApiCategory(val labelRu: String, val countsInLibraries: Boolean = false) {
+    SMS("Отправка/чтение SMS", countsInLibraries = true),
     TELEPHONY_ID("Идентификаторы телефона и SIM"),
     SHELL_EXEC("Выполнение shell-команд"),
     DYNAMIC_CODE("Динамическая загрузка кода"),
@@ -10,8 +14,8 @@ enum class ApiCategory(val labelRu: String) {
     CAMERA("Камера"),
     AUDIO_RECORD("Запись звука"),
     LOCATION("Геолокация"),
-    DEVICE_ADMIN("Администрирование устройства"),
-    ACCESSIBILITY("Службы специальных возможностей"),
+    DEVICE_ADMIN("Администрирование устройства", countsInLibraries = true),
+    ACCESSIBILITY("Службы специальных возможностей", countsInLibraries = true),
     HIDE_ICON("Скрытие/отключение компонентов"),
     PACKAGE_INSTALL("Установка/удаление приложений"),
     SCREEN_CAPTURE("Захват экрана"),

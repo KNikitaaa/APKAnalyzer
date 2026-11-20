@@ -118,6 +118,38 @@ class SettingsViewModel(private val c: AppContainer) : ViewModel() {
         c.settings.setConsent(false)
         c.settings.setAlwaysPreview(true)
     }
+    /** Ключ VirusTotal для проверки репутации по SHA-256 (хранится зашифрованным). */
+    private val _vtKeySaved = MutableStateFlow(c.reputation.hasKey())
+    val vtKeySaved: StateFlow<Boolean> = _vtKeySaved.asStateFlow()
+
+    fun saveVtKey(key: String) {
+        if (key.isBlank()) return
+        c.reputation.saveKey(key)
+        _vtKeySaved.value = true
+    }
+
+    fun removeVtKey() {
+        c.reputation.removeKey()
+        _vtKeySaved.value = false
+    }
+
+    /** Действующий набор правил и сообщение о последней загрузке пакета. */
+    val rulePack = c.rulePacks.status
+    private val _rulePackMessage = MutableStateFlow<String?>(null)
+    val rulePackMessage: StateFlow<String?> = _rulePackMessage.asStateFlow()
+
+    fun installRulePack(uri: android.net.Uri) = viewModelScope.launch {
+        _rulePackMessage.value = c.rulePacks.install(uri).fold(
+            onSuccess = { "Пакет правил ${it.version} проверен и применён" },
+            onFailure = { it.message ?: "Пакет не принят" },
+        )
+    }
+
+    fun resetRulePack() = viewModelScope.launch {
+        c.rulePacks.reset()
+        _rulePackMessage.value = "Действуют встроенные правила"
+    }
+
     fun setRetention(days: Int) = viewModelScope.launch {
         c.settings.setHistoryRetentionDays(days)
         c.history.purgeOlderThan(days)

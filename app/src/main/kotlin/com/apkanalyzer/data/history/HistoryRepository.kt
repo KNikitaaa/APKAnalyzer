@@ -33,6 +33,7 @@ class HistoryRepository(private val dao: AnalysisDao) {
                 reportJson = ReportJson.encode(doc, pretty = false),
                 aiUsed = doc.aiExplanation != null,
                 aiProviderName = doc.aiExplanation?.provider,
+                appLabel = doc.app?.label?.takeIf { !it.startsWith("@") },
             ),
         )
     }

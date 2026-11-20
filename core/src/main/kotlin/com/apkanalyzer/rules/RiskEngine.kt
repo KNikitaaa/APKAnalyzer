@@ -32,16 +32,20 @@ data class RiskAssessment(
 class RiskEngine(
     private val rules: List<Rule> = RuleCatalog.all,
     private val mitigations: List<Mitigation> = RuleCatalog.mitigations,
-    val rulesVersion: String = RuleCatalog.VERSION,
+    /** Пороги, веса и списки; по умолчанию встроенные, может прийти из подписанного пакета правил. */
+    val params: RuleParams = RuleParams.DEFAULT,
 ) {
+    val rulesVersion: String get() = params.version
+
 
     fun assess(report: ApkAnalysisReport): RiskAssessment {
-        val facts = ApkFacts(report)
+        val facts = ApkFacts(report, params)
 
         // 1. Одиночные признаки
         val hits = LinkedHashMap<String, Hit>()
         val ruleErrors = mutableListOf<String>()
-        for (rule in rules.filter { it.kind == RuleKind.SIGNAL }) {
+        val active = rules.filter { it.id !in params.disabledRules }
+        for (rule in active.filter { it.kind == RuleKind.SIGNAL }) {
             try {
                 rule.evaluateSignal(facts)?.let { hits[rule.id] = it }
             } catch (e: Exception) {
@@ -50,7 +54,7 @@ class RiskEngine(
         }
 
         // 2. Связки: из каждой группы должно сработать хотя бы одно правило
-        for (rule in rules.filter { it.kind == RuleKind.COMBINATION }) {
+        for (rule in active.filter { it.kind == RuleKind.COMBINATION }) {
             val parts = rule.requires.map { group -> group.mapNotNull { id -> hits[id]?.let { id to it } } }
             if (parts.any { it.isEmpty() }) continue
             val used = parts.flatten()
@@ -76,10 +80,10 @@ class RiskEngine(
                 descriptionRu = rule.descriptionRu,
                 category = rule.category,
                 kind = rule.kind,
-                baseWeight = rule.weight,
+                baseWeight = params.weightOf(rule),
                 confidence = hit.confidence,
                 mitigations = applied,
-                effectiveWeight = rule.weight * hit.confidence * factor,
+                effectiveWeight = params.weightOf(rule) * hit.confidence * factor,
                 evidence = hit.evidence,
             )
         }.sortedWith(compareByDescending<RuleMatch> { it.effectiveWeight }.thenBy { it.ruleId })
@@ -99,14 +103,14 @@ class RiskEngine(
         if (facts.manifest == null) {
             return RiskLevel.Insufficient to "Не удалось прочитать манифест — без него нельзя понять, что делает приложение."
         }
-        if (score >= HIGH_THRESHOLD) {
+        if (score >= params.highThreshold) {
             val why = if (strong.isNotEmpty()) "Обнаружены сильные взаимосвязанные индикаторы: $strong." else "Обнаружено несколько весомых индикаторов."
             return RiskLevel.High to why
         }
         if (!facts.codeAvailable) {
             return RiskLevel.Insufficient to "Код приложения (DEX) не удалось разобрать — поведение нельзя оценить."
         }
-        if (facts.packers.isNotEmpty() && facts.apiUsages.isEmpty()) {
+        if (facts.packers.isNotEmpty() && facts.allApiUsages.isEmpty()) {
             return RiskLevel.Insufficient to "Код защищён упаковщиком (${facts.packers.first().name}): настоящее поведение скрыто от статического анализа."
         }
         if (coverage < MIN_COVERAGE) {
@@ -114,7 +118,7 @@ class RiskEngine(
         }
         // «Нужно внимание» — только если есть хотя бы один весомый признак или связка:
         // набор обычных разрешений (камера, контакты, геолокация…) сам по себе тревогу не поднимает.
-        if (score >= ATTENTION_THRESHOLD && matches.any { it.effectiveWeight >= SIGNIFICANT_WEIGHT }) {
+        if (score >= params.attentionThreshold && matches.any { it.effectiveWeight >= SIGNIFICANT_WEIGHT }) {
             val top = matches.take(3).joinToString { "«${it.titleRu}»" }
             return RiskLevel.Attention to "Есть признаки, требующие проверки: $top."
         }

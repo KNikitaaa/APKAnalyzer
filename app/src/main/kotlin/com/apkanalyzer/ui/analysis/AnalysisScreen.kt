@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apkanalyzer.ApkAnalyzerApp
 import com.apkanalyzer.R
+import com.apkanalyzer.ui.components.AppCard
+import com.apkanalyzer.ui.components.IconBubble
 import com.apkanalyzer.analyzer.AnalysisStage
 import com.apkanalyzer.ui.report.ReportContent
 import com.apkanalyzer.ui.theme.RiskColors
@@ -78,7 +81,7 @@ fun AnalysisScreen(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.analysis_title)) },
+                title = { Text(stringResource(if (state is AnalysisUiState.Done) R.string.analysis_title_report else R.string.analysis_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(painterResource(R.drawable.ic_arrow_back), contentDescription = stringResource(R.string.analysis_back))
@@ -130,50 +133,61 @@ private fun ProgressContent(title: String, stage: AnalysisStage?, progress: Floa
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        if (progress == null) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        } else {
-            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+            Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
+                if (progress == null) {
+                    CircularProgressIndicator(Modifier.fillMaxSize(), strokeWidth = 5.dp, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                } else {
+                    CircularProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxSize(), strokeWidth = 5.dp, trackColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                }
+                Icon(painterResource(R.drawable.ic_shield), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(30.dp))
+            }
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(stringResource(R.string.analysis_checking), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(stringResource(R.string.analysis_offline_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         if (stage != null) {
-            Text(
-                stage.labelRu,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                AnalysisStage.entries.forEach { s ->
-                    val done = s.ordinal < stage.ordinal
-                    val current = s == stage
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(
-                            Modifier
-                                .size(10.dp)
-                                .background(
-                                    when {
-                                        done -> RiskColors.Low
-                                        current -> MaterialTheme.colorScheme.primary
-                                        else -> MaterialTheme.colorScheme.surfaceVariant
-                                    },
-                                    CircleShape,
-                                ),
-                        )
-                        Text(
-                            s.labelRu,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (done || current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+            AppCard {
+                Column(Modifier.padding(vertical = 8.dp)) {
+                    AnalysisStage.entries.forEach { s ->
+                        val done = s.ordinal < stage.ordinal
+                        val current = s == stage
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
+                            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                                when {
+                                    done -> Box(
+                                        Modifier.size(22.dp).background(RiskColors.LowBackground, CircleShape),
+                                        contentAlignment = Alignment.Center,
+                                    ) { Icon(painterResource(R.drawable.ic_check), contentDescription = null, tint = RiskColors.Low, modifier = Modifier.size(16.dp)) }
+                                    current -> CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.5.dp)
+                                    else -> Box(Modifier.size(10.dp).background(MaterialTheme.colorScheme.outlineVariant, CircleShape))
+                                }
+                            }
+                            Text(
+                                s.labelRu,
+                                style = if (current) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyLarge,
+                                color = if (done || current) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                // Текущий этап объявляется экранным диктором по мере смены.
+                                modifier = if (current) Modifier.semantics { liveRegion = LiveRegionMode.Polite } else Modifier,
+                            )
+                        }
                     }
                 }
             }
+        } else {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
         }
         Spacer(Modifier.weight(1f))
-        OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(48.dp)) {
             Text(stringResource(R.string.analysis_cancel))
         }
     }
@@ -192,14 +206,16 @@ fun MessageContent(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
+        Spacer(Modifier.height(24.dp))
+        IconBubble(R.drawable.ic_description, tint = MaterialTheme.colorScheme.onSecondaryContainer, container = MaterialTheme.colorScheme.secondaryContainer, size = 64.dp)
+        Text(title, style = MaterialTheme.typography.headlineSmall)
         if (message != null) {
             Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Spacer(Modifier.height(8.dp))
-        Button(onClick = primary.second, modifier = Modifier.fillMaxWidth()) { Text(primary.first) }
+        Spacer(Modifier.weight(1f))
+        Button(onClick = primary.second, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(primary.first) }
         if (secondary != null) {
-            OutlinedButton(onClick = secondary.second, modifier = Modifier.fillMaxWidth()) { Text(secondary.first) }
+            OutlinedButton(onClick = secondary.second, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(secondary.first) }
         }
     }
 }

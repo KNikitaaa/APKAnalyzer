@@ -18,7 +18,7 @@ object ReportBuilder {
         analyzerVersion = report.analyzerVersion,
         rulesVersion = risk.rulesVersion,
         file = ReportFile(report.file.displayName, report.file.sizeBytes, report.file.sha256),
-        app = report.manifest?.let { ReportApp(it.packageName, it.versionName, it.versionCode, it.minSdk, it.targetSdk) },
+        app = report.manifest?.let { ReportApp(it.packageName, it.versionName, it.versionCode, it.minSdk, it.targetSdk, it.application.label) },
         risk = ReportRisk(RiskCode.of(risk.level), risk.score, risk.levelReasonRu, risk.coverage),
         findings = risk.matches.map { m ->
             ReportFinding(
@@ -37,5 +37,6 @@ object ReportBuilder {
         recommendations = Recommendations.forAssessment(risk),
         limitations = risk.limitations,
         sections = RawFeatureFormatter.format(report),
+        splits = report.splits.map { ReportFile(it.name, it.sizeBytes, it.sha256) },
     )
 }

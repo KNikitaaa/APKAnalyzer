@@ -38,6 +38,9 @@ object RawFeatureFormatter {
             "file", "Файл",
             listOf(
                 FeatureItem("Имя", report.file.displayName),
+            ) + listOfNotNull(
+                report.containerFormat?.let { FeatureItem("Формат", "контейнер $it: основной APK и части split APK проанализированы вместе") },
+            ) + listOf(
                 FeatureItem("Размер", humanBytes(report.file.sizeBytes)),
                 FeatureItem("SHA-256", report.file.sha256),
                 FeatureItem("Полнота анализа", "${(report.coverage * 100).toInt()}%",
@@ -45,6 +48,16 @@ object RawFeatureFormatter {
                 FeatureItem("Версия анализатора", report.analyzerVersion),
             ),
         )
+
+        if (report.splits.isNotEmpty()) {
+            sections += FeatureSection(
+                "splits", "Части split APK",
+                report.splits.map { sp ->
+                    if (sp.error == null) FeatureItem(sp.name, "${humanBytes(sp.sizeBytes)} · SHA-256 ${sp.sha256}")
+                    else FeatureItem(sp.name, "не проанализирована: ${sp.error}", FeatureEmphasis.WARNING)
+                },
+            )
+        }
 
         report.manifest?.let { m ->
             val items = mutableListOf(
@@ -124,8 +137,12 @@ object RawFeatureFormatter {
                 FeatureItem("Короткие имена классов", "${(code.obfuscation.shortNameRatio * 100).toInt()}%",
                     if (code.obfuscation.shortNameRatio > 0.5f) FeatureEmphasis.NOTICE else FeatureEmphasis.NORMAL),
             )
-            code.apiUsages.sortedBy { it.api.category.ordinal }.forEach { u ->
-                items += FeatureItem(u.api.displayName, "${u.api.category.labelRu}: ${u.api.descriptionRu}", FeatureEmphasis.NOTICE)
+            code.apiUsages.sortedWith(compareBy({ !it.inAppCode }, { it.api.category.ordinal })).forEach { u ->
+                if (u.inAppCode || u.api.category.countsInLibraries) {
+                    items += FeatureItem(u.api.displayName, "${u.api.category.labelRu}: ${u.api.descriptionRu}", FeatureEmphasis.NOTICE)
+                } else {
+                    items += FeatureItem(u.api.displayName, "${u.api.category.labelRu} — только в библиотеках, на оценку не влияет")
+                }
             }
             sections += FeatureSection("code", "Код и чувствительные API (${code.apiUsages.size})", items)
         }

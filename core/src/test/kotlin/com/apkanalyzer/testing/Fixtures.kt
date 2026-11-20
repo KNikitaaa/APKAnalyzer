@@ -112,57 +112,132 @@ object AxmlWriter {
 }
 
 /** Генератор минимального DEX: строки, типы, ссылки на методы и определённые классы. */
+/** Инструкция байткода для [DexWriter]. */
+sealed class Insn {
+    /** invoke-static {}, Lcls;->method */
+    data class Invoke(val cls: String, val method: String) : Insn()
+    data class ConstString(val value: String) : Insn()
+    data class ConstClass(val type: String) : Insn()
+    /** packed-switch c таблицей из [size] целей — проверяет, что разборщик пропускает payload-данные. */
+    data class PackedSwitch(val size: Int) : Insn()
+}
+
 object DexWriter {
+    /**
+     * @param code байткод: класс → инструкции его единственного метода `run()`.
+     *   Без [code] DEX содержит только таблицы (как в первых версиях тестов).
+     */
     fun write(
         strings: List<String> = emptyList(),
         methodRefs: List<Pair<String, String>> = emptyList(),
         definedClasses: List<String> = listOf("Lcom/example/app/MainActivity;"),
+        code: Map<String, List<Insn>> = emptyMap(),
+        corruptCodeOffset: Boolean = false,
     ): ByteArray {
+        val codeClasses = code.keys.toList()
+        val allDefined = (definedClasses + codeClasses).distinct()
+        val ownMethods = codeClasses.map { it to "run" }
+        val invoked = code.values.flatten().filterIsInstance<Insn.Invoke>().map { it.cls to it.method }
+        val allMethodRefs = (methodRefs + ownMethods + invoked).distinct()
+
         val all = LinkedHashSet<String>()
         all += strings
-        methodRefs.forEach { (c, m) -> all += c; all += m }
-        all += definedClasses
+        code.values.flatten().forEach { i ->
+            when (i) {
+                is Insn.ConstString -> all += i.value
+                is Insn.ConstClass -> all += i.type
+                else -> {}
+            }
+        }
+        allMethodRefs.forEach { (c, m) -> all += c; all += m }
+        all += allDefined
         val pool = all.toList()
         val sIdx = pool.withIndex().associate { (i, s) -> s to i }
-        val types = (methodRefs.map { it.first } + definedClasses).distinct()
+        val types = (allMethodRefs.map { it.first } + allDefined + code.values.flatten().filterIsInstance<Insn.ConstClass>().map { it.type }).distinct()
         val tIdx = types.withIndex().associate { (i, s) -> s to i }
+        val mIdx = allMethodRefs.withIndex().associate { (i, m) -> m to i }
 
         val stringIdsOff = 0x70
         val typeIdsOff = stringIdsOff + pool.size * 4
         val methodIdsOff = typeIdsOff + types.size * 4
-        val classDefsOff = methodIdsOff + methodRefs.size * 8
-        var dataOff = classDefsOff + definedClasses.size * 32
-        val stringData = ByteArrayOutputStream()
-        val stringOffsets = pool.map { s ->
-            val off = dataOff + stringData.size()
-            val bytes = s.toByteArray(Charsets.UTF_8) // для ASCII совпадает с MUTF-8
-            var len = s.length
+        val classDefsOff = methodIdsOff + allMethodRefs.size * 8
+        val dataOff = classDefsOff + allDefined.size * 32
+        val data = ByteArrayOutputStream()
+        fun uleb(out: ByteArrayOutputStream, value: Int) {
+            var v = value
             do {
-                var b = len and 0x7F
-                len = len ushr 7
-                if (len != 0) b = b or 0x80
-                stringData.write(b)
-            } while (len != 0)
-            stringData.write(bytes); stringData.write(0)
+                var b = v and 0x7F
+                v = v ushr 7
+                if (v != 0) b = b or 0x80
+                out.write(b)
+            } while (v != 0)
+        }
+        fun align4() { while ((dataOff + data.size()) % 4 != 0) data.write(0) }
+
+        val stringOffsets = pool.map { s ->
+            val off = dataOff + data.size()
+            uleb(data, s.length)
+            data.write(s.toByteArray(Charsets.UTF_8)) // для ASCII совпадает с MUTF-8
+            data.write(0)
             off
         }
-        val fileSize = dataOff + stringData.size()
+
+        // code_item для каждого класса с кодом
+        val codeOffsets = HashMap<String, Int>()
+        for ((cls, insns) in code) {
+            align4()
+            val units = ArrayList<Int>()
+            val payloads = ArrayList<Pair<Int, Int>>() // (позиция инструкции, размер switch)
+            for (i in insns) when (i) {
+                is Insn.Invoke -> { units += 0x0071; units += mIdx.getValue(i.cls to i.method); units += 0 }
+                is Insn.ConstString -> { units += 0x001a; units += sIdx.getValue(i.value) }
+                is Insn.ConstClass -> { units += 0x001c; units += tIdx.getValue(i.type) }
+                is Insn.PackedSwitch -> { payloads += units.size to i.size; units += 0x002b; units += 0; units += 0 }
+            }
+            units += 0x000e // return-void
+            for ((at, size) in payloads) {
+                if (units.size % 2 != 0) units += 0x0000 // nop для выравнивания payload
+                val rel = units.size - at
+                units[at + 1] = rel and 0xFFFF
+                units[at + 2] = rel ushr 16
+                units += 0x0100; units += size; units += 0; units += 0 // ident, size, first_key
+                repeat(size) { units += 0x0071; units += 0x0000 } // цели выглядят как invoke метода №0
+            }
+            codeOffsets[cls] = dataOff + data.size()
+            val item = ByteBuffer.allocate(16 + units.size * 2).order(ByteOrder.LITTLE_ENDIAN)
+            item.putShort(1).putShort(0).putShort(1).putShort(0).putInt(0).putInt(units.size)
+            units.forEach { item.putShort(it.toShort()) }
+            data.write(item.array())
+        }
+        // class_data_item
+        val classDataOffsets = HashMap<String, Int>()
+        for (cls in codeClasses) {
+            classDataOffsets[cls] = dataOff + data.size()
+            uleb(data, 0); uleb(data, 0); uleb(data, 1); uleb(data, 0)
+            uleb(data, mIdx.getValue(cls to "run")); uleb(data, 0x9) // public static
+            uleb(data, if (corruptCodeOffset) 0x7FFFFFF else codeOffsets.getValue(cls))
+        }
+
+        val fileSize = dataOff + data.size()
         val buf = ByteBuffer.allocate(fileSize).order(ByteOrder.LITTLE_ENDIAN)
         buf.put("dex\n035\u0000".toByteArray(Charsets.ISO_8859_1))
         buf.putInt(32, fileSize); buf.putInt(36, 0x70); buf.putInt(40, 0x12345678)
         buf.putInt(56, pool.size); buf.putInt(60, stringIdsOff)
         buf.putInt(64, types.size); buf.putInt(68, typeIdsOff)
-        buf.putInt(88, methodRefs.size); buf.putInt(92, methodIdsOff)
-        buf.putInt(96, definedClasses.size); buf.putInt(100, classDefsOff)
+        buf.putInt(88, allMethodRefs.size); buf.putInt(92, methodIdsOff)
+        buf.putInt(96, allDefined.size); buf.putInt(100, classDefsOff)
         stringOffsets.forEachIndexed { i, off -> buf.putInt(stringIdsOff + i * 4, off) }
         types.forEachIndexed { i, t -> buf.putInt(typeIdsOff + i * 4, sIdx.getValue(t)) }
-        methodRefs.forEachIndexed { i, (c, m) ->
+        allMethodRefs.forEachIndexed { i, (c, m) ->
             buf.putShort(methodIdsOff + i * 8, tIdx.getValue(c).toShort())
             buf.putShort(methodIdsOff + i * 8 + 2, 0)
             buf.putInt(methodIdsOff + i * 8 + 4, sIdx.getValue(m))
         }
-        definedClasses.forEachIndexed { i, c -> buf.putInt(classDefsOff + i * 32, tIdx.getValue(c)) }
-        buf.position(dataOff); buf.put(stringData.toByteArray())
+        allDefined.forEachIndexed { i, c ->
+            buf.putInt(classDefsOff + i * 32, tIdx.getValue(c))
+            buf.putInt(classDefsOff + i * 32 + 24, classDataOffsets[c] ?: 0)
+        }
+        buf.position(dataOff); buf.put(data.toByteArray())
         return buf.array()
     }
 }

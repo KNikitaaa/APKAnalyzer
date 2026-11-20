@@ -1,7 +1,6 @@
 package com.apkanalyzer.ui.report
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -15,8 +14,6 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +34,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.apkanalyzer.R
+import com.apkanalyzer.ui.components.IconBubble
+import com.apkanalyzer.ui.components.SectionTitle
+import com.apkanalyzer.ui.components.AppCard
 import com.apkanalyzer.report.ReportAi
 import com.apkanalyzer.report.ReportDocument
 import com.apkanalyzer.ui.theme.RiskColors
@@ -50,9 +50,13 @@ fun AiCard(
     onCancel: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    AppCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(stringResource(R.string.ai_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+            // Сливовый (tertiary) цвет закреплён за текстом модели — его не спутать с выводом приложения.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                IconBubble(R.drawable.ic_sparkle, tint = MaterialTheme.colorScheme.onTertiaryContainer, container = MaterialTheme.colorScheme.tertiaryContainer, size = 36.dp)
+                SectionTitle(stringResource(R.string.ai_title))
+            }
             val ai = doc.aiExplanation
             if (ai != null) {
                 AiBadge(ai)
@@ -88,9 +92,9 @@ private fun AiBadge(ai: ReportAi) {
     Text(
         stringResource(R.string.ai_badge, ai.provider, ai.model),
         style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.primary,
+        color = MaterialTheme.colorScheme.onTertiaryContainer,
         modifier = Modifier
-            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.shapes.extraSmall)
             .padding(horizontal = 8.dp, vertical = 4.dp),
     )
 }
@@ -120,7 +124,7 @@ private fun AiExplanationBody(doc: ReportDocument, ai: ReportAi) {
         SubTitle(stringResource(R.string.ai_actions))
         ai.actions.forEachIndexed { i, a ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("${i + 1}.", color = MaterialTheme.colorScheme.primary)
+                Text("${i + 1}.", color = MaterialTheme.colorScheme.tertiary)
                 Column {
                     Text(a.action, style = MaterialTheme.typography.bodyLarge)
                     if (a.why.isNotBlank()) Text(a.why, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

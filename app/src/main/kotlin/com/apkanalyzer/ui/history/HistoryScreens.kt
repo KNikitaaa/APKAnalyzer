@@ -1,7 +1,6 @@
 package com.apkanalyzer.ui.history
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,14 +14,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -47,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.apkanalyzer.ApkAnalyzerApp
 import com.apkanalyzer.R
+import com.apkanalyzer.ui.components.ScoreBadge
 import com.apkanalyzer.data.local.database.entity.AnalysisEntity
 import com.apkanalyzer.domain.model.RiskLevel
 import com.apkanalyzer.ui.analysis.MessageContent
@@ -119,41 +118,37 @@ fun HistoryRoute(onBack: () -> Unit, onOpen: (Long) -> Unit) {
 @Composable
 private fun HistoryRow(e: AnalysisEntity, onOpen: () -> Unit, onDelete: () -> Unit) {
     val level = RiskLevel.fromOrdinal(e.riskLevelOrdinal)
-    val date = remember(e.analyzedAtMs) { SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.forLanguageTag("ru")).format(Date(e.analyzedAtMs)) }
-    Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onOpen),
+    val date = remember(e.analyzedAtMs) { SimpleDateFormat("d MMMM yyyy, HH:mm", Locale.forLanguageTag("ru")).format(Date(e.analyzedAtMs)) }
+    Surface(
+        onClick = onOpen,
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
             Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Box(Modifier.size(12.dp).background(level.color(), CircleShape))
+            ScoreBadge(level, e.riskScore)
             Column(Modifier.weight(1f).semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    e.packageName.ifBlank { e.fileName },
+                    e.appLabel ?: e.packageName.ifBlank { e.fileName },
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Text(level.labelRu, style = MaterialTheme.typography.bodyMedium, color = level.color())
                 Text(
-                    level.labelRu + if (level != RiskLevel.Insufficient) " · ${e.riskScore}/100" else "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = level.color(),
-                )
-                Text(
-                    "$date · ${e.fileName}",
-                    style = MaterialTheme.typography.labelSmall,
+                    date + (if (e.appLabel != null && e.packageName.isNotBlank()) " · ${e.packageName}" else " · ${e.fileName}"),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
             IconButton(onClick = onDelete) {
-                Icon(painterResource(R.drawable.ic_delete), contentDescription = stringResource(R.string.history_delete_item))
+                Icon(painterResource(R.drawable.ic_delete), contentDescription = stringResource(R.string.history_delete_item), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

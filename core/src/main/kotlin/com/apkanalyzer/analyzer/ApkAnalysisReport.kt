@@ -39,6 +39,15 @@ data class FileInfo(
     val sha256: String,
 )
 
+data class SplitFileInfo(
+    val name: String,
+    val sizeBytes: Long,
+    /** Пусто, если файл не удалось прочитать. */
+    val sha256: String,
+    /** Почему часть не проанализирована; null — проанализирована. */
+    val error: String?,
+)
+
 data class ObfuscationInfo(
     val definedClasses: Int,
     /** Доля классов с короткими (1–2 символа) именами — типичный след R8/ProGuard или обфускатора. */
@@ -50,6 +59,10 @@ data class CodeSummary(
     val apiUsages: List<ApiUsage>,
     val obfuscation: ObfuscationInfo,
     val stringsScanned: Int,
+    /** Байткод разобран: API и строки привязаны к коду приложения, а не к библиотекам. */
+    val bytecodeAttributed: Boolean = false,
+    /** Компоненты из манифеста, которые код приложения включает/отключает (setComponentEnabledSetting в том же классе). */
+    val componentsToggledByApp: Set<String> = emptySet(),
 )
 
 /**
@@ -69,6 +82,10 @@ data class ApkAnalysisReport(
     val indicatorsTruncated: Boolean,
     val archiveAnomalies: List<ArchiveAnomaly>,
     val stages: List<StageResult>,
+    /** Части split APK, проанализированные вместе с основным файлом. */
+    val splits: List<SplitFileInfo> = emptyList(),
+    /** Формат контейнера (APKS, XAPK, APKM), если пользователь выбрал контейнер, а не одиночный APK. */
+    val containerFormat: String? = null,
 ) {
     /** Полнота анализа 0..1 с учётом веса этапов (частичный этап засчитывается наполовину). */
     val coverage: Float

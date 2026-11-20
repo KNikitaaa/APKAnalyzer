@@ -58,4 +58,8 @@ data class AnalysisEntity(
 
     @ColumnInfo(name = "ai_provider_name")
     val aiProviderName: String? = null,
+
+    /** Название приложения из ресурсов (с версии БД 2). */
+    @ColumnInfo(name = "app_label")
+    val appLabel: String? = null,
 )

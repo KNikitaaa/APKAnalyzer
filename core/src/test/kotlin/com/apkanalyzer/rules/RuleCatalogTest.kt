@@ -76,7 +76,8 @@ class RuleCatalogTest {
             permissions = listOf("INTERNET", "RECEIVE_SMS"),
             components = listOf(component("service", ".Notif", "BIND_NOTIFICATION_LISTENER_SERVICE")),
         ),
-        "COMBO_ROOT_TOOLKIT" to ApkSpec(dexStrings = listOf("su"), apis = listOf("Ljava/lang/Runtime;" to "exec")),
+        "COMBO_ROOT_TOOLKIT" to ApkSpec(dexStrings = listOf("su -c /data/local/tmp/exploit"), extraEntries = listOf("assets/exploit" to byteArrayOf(0x7F, 0x45, 0x4C, 0x46) + ByteArray(64))),
+        "COMBO_SMS_INTERCEPT_EXFIL" to ApkSpec(permissions = listOf("RECEIVE_SMS"), dexStrings = listOf("https://api.telegram.org/bot1:x/sendMessage")),
         "COMBO_DATA_EXFIL" to ApkSpec(permissions = listOf("READ_CONTACTS"), dexStrings = listOf("https://grab-data.xyz/upload")),
     )
 

@@ -31,8 +31,8 @@ sealed interface AnalysisUiState {
     data class Running(val fileName: String, val stage: AnalysisStage, val progress: Float) : AnalysisUiState
     data class Done(
         val doc: ReportDocument,
-        /** Выбранный пользователем файл — для кнопки «Удалить файл». */
-        val sourceUri: Uri,
+        /** Выбранный пользователем файл — для кнопки «Удалить файл»; null для установленного приложения. */
+        val sourceUri: Uri?,
         /** ID записи в истории; null — сохранить не удалось. */
         val historyId: Long?,
     ) : AnalysisUiState
@@ -46,7 +46,13 @@ class AnalysisViewModel(
     private val c: AppContainer,
 ) : ViewModel() {
 
-    private val uri: Uri = Uri.parse(checkNotNull(savedStateHandle.get<String>(ARG_URI)) { "Не передан URI файла" })
+    /** Источник: выбранный файл или установленное приложение (этап 5). */
+    private val uri: Uri? = savedStateHandle.get<String>(ARG_URI)?.let(Uri::parse)
+    private val installedPackage: String? = savedStateHandle.get<String>(ARG_PKG)
+
+    init {
+        require(uri != null || installedPackage != null) { "Не передан ни файл, ни пакет" }
+    }
 
     private val _state = MutableStateFlow<AnalysisUiState>(AnalysisUiState.Importing)
     val state: StateFlow<AnalysisUiState> = _state.asStateFlow()
@@ -73,25 +79,42 @@ class AnalysisViewModel(
         _state.value = AnalysisUiState.Cancelled
     }
 
-    private suspend fun run() {
+    /** Что анализируем: файл во временной папке (удаляется после анализа) или APK установленного приложения. */
+    private class Target(val file: java.io.File, val displayName: String, val splits: List<java.io.File>, val temporary: Boolean)
+
+    private suspend fun prepare(): Target? {
+        installedPackage?.let { pkg ->
+            _state.value = AnalysisUiState.Running(pkg, AnalysisStage.VALIDATION, 0f)
+            val files = c.installedApps.apkFiles(pkg)
+            if (files == null) {
+                _state.value = AnalysisUiState.Rejected(INSTALLED_UNAVAILABLE)
+                return null
+            }
+            return Target(files.base, "${files.label} ($pkg)", files.splits, temporary = false)
+        }
         _state.value = AnalysisUiState.Importing
-        val imported = when (val r = c.importer.importApk(uri)) {
-            is ImportResult.Success -> r.apk
+        return when (val r = c.importer.importApk(checkNotNull(uri))) {
+            is ImportResult.Success -> Target(r.apk.file, r.apk.displayName, emptyList(), temporary = true)
             is ImportResult.Failure -> {
                 _state.value = AnalysisUiState.Rejected(r.reason)
-                return
+                null
             }
         }
+    }
+
+    private suspend fun run() {
+        val target = prepare() ?: return
         try {
             val doc = withContext(Dispatchers.Default) {
                 val ctx = currentCoroutineContext()
                 val outcome = c.analyzer.analyze(
-                    file = imported.file,
-                    displayName = imported.displayName,
+                    file = target.file,
+                    displayName = target.displayName,
                     cancel = { !ctx.isActive },
                     progress = { stage, fraction ->
-                        _state.value = AnalysisUiState.Running(imported.displayName, stage, fraction)
+                        _state.value = AnalysisUiState.Running(target.displayName, stage, fraction)
                     },
+                    splits = target.splits,
                 )
                 when (outcome) {
                     is AnalysisOutcome.Completed -> ReportBuilder.build(outcome.report, c.riskEngine.assess(outcome.report), c.appVersion)
@@ -112,12 +135,16 @@ class AnalysisViewModel(
         } catch (e: Exception) {
             _state.value = AnalysisUiState.Failed(e.message ?: e.javaClass.simpleName)
         } finally {
-            imported.file.delete()
+            // Удаляем только свою временную копию — файлы установленного приложения не трогаем.
+            if (target.temporary) target.file.delete()
         }
     }
 
     companion object {
         const val ARG_URI = "uri"
+        const val ARG_PKG = "pkg"
+        private const val INSTALLED_UNAVAILABLE =
+            "Приложение не найдено или его APK недоступен для чтения. Возможно, оно уже удалено."
 
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
             initializer { AnalysisViewModel(createSavedStateHandle(), container) }

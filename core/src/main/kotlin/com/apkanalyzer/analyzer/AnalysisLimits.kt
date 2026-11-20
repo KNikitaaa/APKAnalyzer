@@ -32,6 +32,8 @@ data class AnalysisLimits(
     val maxTextAssetBytes: Int = 2 * 1024 * 1024,
     /** Сколько текстовых ассетов максимум просматриваем. */
     val maxTextAssets: Int = 300,
+    /** Максимальный размер resources.arsc, который читаем ради названия приложения. */
+    val maxResourcesBytes: Int = 48 * 1024 * 1024,
     /** Максимальный размер APK Signing Block. */
     val maxSigningBlockBytes: Int = 32 * 1024 * 1024,
     /** Ограничения на число найденных индикаторов каждого типа (чтобы отчёт не разрастался). */

@@ -22,6 +22,8 @@ data class ApkSpec(
     val definedClasses: List<String> = listOf("Lcom/example/app/MainActivity;", "Lcom/example/app/Worker;", "Lcom/example/app/Api;"),
     val extraEntries: List<Pair<String, ByteArray>> = emptyList(),
     val cert: String? = "dev-cert.der",
+    /** Байткод: класс → инструкции. Позволяет проверить, откуда вызывается API — из приложения или из библиотеки. */
+    val code: Map<String, List<Insn>> = emptyMap(),
 ) {
     fun manifest(): El {
         val appChildren = buildList {
@@ -48,7 +50,7 @@ data class ApkSpec(
         val zip = ApkBuilder.zip(
             listOf(
                 "AndroidManifest.xml" to AxmlWriter.write(manifest()),
-                "classes.dex" to DexWriter.write(strings = dexStrings, methodRefs = apis, definedClasses = definedClasses),
+                "classes.dex" to DexWriter.write(strings = dexStrings, methodRefs = apis, definedClasses = definedClasses, code = code),
             ) + extraEntries,
         )
         return if (cert == null) zip else ApkBuilder.withSigningBlock(zip, listOf(0x7109871a to ApkBuilder.v2SignerValue(listOf(resource(cert)))))

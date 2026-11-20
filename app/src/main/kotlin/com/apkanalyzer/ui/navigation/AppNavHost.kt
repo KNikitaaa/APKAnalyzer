@@ -13,16 +13,19 @@ import com.apkanalyzer.ui.history.HistoryRoute
 import com.apkanalyzer.ui.history.SavedReportRoute
 import com.apkanalyzer.ui.history.SavedReportViewModel
 import com.apkanalyzer.ui.home.HomeScreen
+import com.apkanalyzer.ui.installed.InstalledAppsRoute
 import com.apkanalyzer.ui.settings.SettingsRoute
 
 object Routes {
     const val HOME = "home"
     const val HISTORY = "history"
     const val SETTINGS = "settings"
-    const val ANALYSIS = "analysis?${AnalysisViewModel.ARG_URI}={${AnalysisViewModel.ARG_URI}}"
+    const val INSTALLED = "installed"
+    const val ANALYSIS = "analysis?${AnalysisViewModel.ARG_URI}={${AnalysisViewModel.ARG_URI}}&${AnalysisViewModel.ARG_PKG}={${AnalysisViewModel.ARG_PKG}}"
     const val REPORT = "report/{${SavedReportViewModel.ARG_ID}}"
 
     fun analysis(uri: Uri) = "analysis?${AnalysisViewModel.ARG_URI}=${Uri.encode(uri.toString())}"
+    fun analysisInstalled(packageName: String) = "analysis?${AnalysisViewModel.ARG_PKG}=${Uri.encode(packageName)}"
     fun report(id: Long) = "report/$id"
 }
 
@@ -33,15 +36,23 @@ fun AppNavHost() {
         composable(Routes.HOME) {
             HomeScreen(
                 onApkPicked = { uri -> nav.navigate(Routes.analysis(uri)) },
+                onOpenInstalled = { nav.navigate(Routes.INSTALLED) },
                 onOpenHistory = { nav.navigate(Routes.HISTORY) },
                 onOpenSettings = { nav.navigate(Routes.SETTINGS) },
+                onOpenReport = { id -> nav.navigate(Routes.report(id)) },
             )
         }
         composable(
             route = Routes.ANALYSIS,
-            arguments = listOf(navArgument(AnalysisViewModel.ARG_URI) { type = NavType.StringType }),
+            arguments = listOf(
+                navArgument(AnalysisViewModel.ARG_URI) { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument(AnalysisViewModel.ARG_PKG) { type = NavType.StringType; nullable = true; defaultValue = null },
+            ),
         ) {
             AnalysisRoute(onBack = { nav.popBackStack() }, onOpenSettings = { nav.navigate(Routes.SETTINGS) })
+        }
+        composable(Routes.INSTALLED) {
+            InstalledAppsRoute(onBack = { nav.popBackStack() }, onAnalyze = { pkg -> nav.navigate(Routes.analysisInstalled(pkg)) })
         }
         composable(Routes.HISTORY) {
             HistoryRoute(onBack = { nav.popBackStack() }, onOpen = { id -> nav.navigate(Routes.report(id)) })

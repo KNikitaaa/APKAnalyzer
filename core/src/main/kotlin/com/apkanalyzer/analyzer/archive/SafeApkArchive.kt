@@ -100,6 +100,47 @@ class SafeApkArchive private constructor(
         return data
     }
 
+    /**
+     * Потоково распаковывает запись в [out] (для вложенных APK в контейнерах .apks/.xapk — они бывают
+     * по сотне мегабайт, держать их в памяти телефона нельзя). Действуют те же лимиты и проверка CRC32.
+     * @return сколько байт записано.
+     */
+    fun copyTo(entry: ZipEntryInfo, out: java.io.OutputStream, maxBytes: Long): Long {
+        val dataStart = dataOffset(entry)
+        val crc = CRC32()
+        var written = 0L
+        val sink: (ByteArray, Int, Int) -> Boolean = { buf, off, len ->
+            if (written + len > maxBytes) throw AnalysisLimitExceededException("Запись '${entry.name}' больше лимита $maxBytes байт")
+            out.write(buf, off, len)
+            crc.update(buf, off, len)
+            written += len
+            true
+        }
+        if (entry.method == METHOD_STORED) {
+            val declared = entry.uncompressedSize
+            if (declared > fileSize - dataStart) throw MalformedApkException("Запись '${entry.name}' обрезана")
+            if (declared > maxBytes) throw AnalysisLimitExceededException("Запись '${entry.name}' больше лимита $maxBytes байт")
+            val buf = ByteArray(IO_CHUNK)
+            var pos = dataStart
+            val end = dataStart + declared
+            while (pos < end) {
+                cancel.throwIfCancelled()
+                val n = minOf(IO_CHUNK.toLong(), end - pos).toInt()
+                synchronized(raf) {
+                    raf.seek(pos)
+                    raf.readFully(buf, 0, n)
+                }
+                account(n.toLong())
+                sink(buf, 0, n)
+                pos += n
+            }
+        } else {
+            inflateTo(entry, dataStart, sink)
+        }
+        if (crc.value != entry.crc32) throw MalformedApkException("Контрольная сумма '${entry.name}' не совпадает")
+        return written
+    }
+
     /** Чтение «сырого» диапазона файла (для APK Signing Block). */
     fun readRange(offset: Long, length: Int): ByteArray {
         if (offset < 0 || length < 0 || offset + length > fileSize) {
@@ -144,6 +185,23 @@ class SafeApkArchive private constructor(
     }
 
     private fun inflate(entry: ZipEntryInfo, start: Long, maxBytes: Int, truncate: Boolean): ByteArray {
+        val out = ByteArrayOutputStream(minOf(maxBytes, 64 * 1024).coerceAtLeast(16))
+        inflateTo(entry, start) { buf, off, n ->
+            val room = maxBytes - out.size()
+            if (n > room) {
+                if (!truncate) throw AnalysisLimitExceededException("Запись '${entry.name}' больше лимита $maxBytes байт")
+                out.write(buf, off, room)
+                false
+            } else {
+                out.write(buf, off, n)
+                true
+            }
+        }
+        return out.toByteArray()
+    }
+
+    /** Распаковка Deflate с защитой от zip-bomb. [sink] получает куски данных; false — достаточно, остановиться. */
+    private fun inflateTo(entry: ZipEntryInfo, start: Long, sink: (ByteArray, Int, Int) -> Boolean) {
         // Сжатый размер берём из каталога, но не выходим за пределы файла.
         // Если размер в каталоге нулевой/подделан, читаем не дальше начала центрального каталога.
         val dataLimit = centralDirectoryOffset
@@ -153,7 +211,6 @@ class SafeApkArchive private constructor(
             dataLimit
         }.let { if (it <= start) dataLimit else it }
         val inflater = Inflater(true)
-        val out = ByteArrayOutputStream(minOf(maxBytes, 64 * 1024).coerceAtLeast(16))
         val inBuf = ByteArray(IO_CHUNK)
         val outBuf = ByteArray(IO_CHUNK)
         var position = start
@@ -190,15 +247,7 @@ class SafeApkArchive private constructor(
                             "Подозрение на zip-bomb: '${entry.name}' сжат в ${produced / consumed}+ раз"
                         )
                     }
-                    val room = maxBytes - out.size()
-                    if (n > room) {
-                        if (truncate) {
-                            out.write(outBuf, 0, room)
-                            return out.toByteArray()
-                        }
-                        throw AnalysisLimitExceededException("Запись '${entry.name}' больше лимита $maxBytes байт")
-                    }
-                    out.write(outBuf, 0, n)
+                    if (!sink(outBuf, 0, n)) return
                 }
             }
         } catch (e: DataFormatException) {
@@ -206,7 +255,6 @@ class SafeApkArchive private constructor(
         } finally {
             inflater.end()
         }
-        return out.toByteArray()
     }
 
     private fun account(bytes: Long) {

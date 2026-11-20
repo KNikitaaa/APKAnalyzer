@@ -17,6 +17,8 @@ data class StringIndicator(
     val source: String,
     /** Для IP: частный/локальный адрес (обычно не опасен). */
     val isPrivate: Boolean = false,
+    /** Найден только в коде известной библиотеки (не приложения). */
+    val fromLibrary: Boolean = false,
 )
 
 /**
@@ -39,7 +41,11 @@ class IndicatorExtractor(
 
     val indicators: List<StringIndicator> get() = found.values.toList()
 
-    fun scan(text: String, source: String) {
+    private var fromLibrary = false
+
+    /** @param fromLibrary строка из кода известной библиотеки — индикатор помечается, правила учитывают его выборочно. */
+    fun scan(text: String, source: String, fromLibrary: Boolean = false) {
+        this.fromLibrary = fromLibrary
         if (text.length < 4) {
             if (text == "su") add(IndicatorType.SHELL_COMMAND, text, source)
             return
@@ -59,7 +65,7 @@ class IndicatorExtractor(
                     if (isIpv4(host)) addIp(host, source) else if (isPlausibleDomain(host)) add(IndicatorType.DOMAIN, host, source)
                 }
             }
-        } else if (BARE_HOST_REGEX.matches(lower) && isPlausibleDomain(lower) && !looksLikePackageName(lower)) {
+        } else if (text == lower && BARE_HOST_REGEX.matches(lower) && isPlausibleDomain(lower) && !looksLikePackageName(lower) && isConvincingBareHost(lower)) {
             add(IndicatorType.DOMAIN, lower, source)
         }
 
@@ -89,13 +95,17 @@ class IndicatorExtractor(
         val value = raw.trim().take(maxValueLength)
         if (value.isEmpty()) return
         val key = type to value
-        if (key in found) return
+        found[key]?.let { existing ->
+            // Тот же индикатор нашёлся и в коде приложения — он принадлежит приложению.
+            if (existing.fromLibrary && !fromLibrary) found[key] = existing.copy(source = source, fromLibrary = false)
+            return
+        }
         if (counts[type.ordinal] >= maxPerType) {
             truncated = true
             return
         }
         counts[type.ordinal]++
-        found[key] = StringIndicator(type, value, source, isPrivate)
+        found[key] = StringIndicator(type, value, source, isPrivate, fromLibrary)
     }
 
     companion object {
@@ -153,9 +163,14 @@ class IndicatorExtractor(
             return parts.all { p -> p.isNotEmpty() && p.length <= 3 && p.all(Char::isDigit) && p.toInt() <= 255 && !(p.length > 1 && p.startsWith("0")) }
         }
 
+        /** Не публичный адрес хоста: частные, служебные, документационные диапазоны и адреса сетей (x.x.x.0). */
         fun isPrivateIp(ip: String): Boolean {
             val o = ip.split('.').map { it.toInt() }
-            return o[0] == 10 || o[0] == 127 || o[0] == 0 ||
+            return o[0] == 10 || o[0] == 127 || o[0] == 0 || o[3] == 0 ||
+                (o[0] == 192 && o[1] == 0 && o[2] == 2) ||
+                (o[0] == 198 && o[1] == 51 && o[2] == 100) ||
+                (o[0] == 203 && o[1] == 0 && o[2] == 113) ||
+                (o[0] == 198 && o[1] in 18..19) ||
                 (o[0] == 172 && o[1] in 16..31) ||
                 (o[0] == 192 && o[1] == 168) ||
                 (o[0] == 169 && o[1] == 254) ||
@@ -170,6 +185,18 @@ class IndicatorExtractor(
             if (labels.any { it.isEmpty() || it.length > 63 }) return false
             return labels.last() in TLDS
         }
+
+        /**
+         * Строка без схемы (не URL) в коде чаще оказывается идентификатором (`this.link`, `current.work`),
+         * чем адресом. Принимаем её как домен, только если зона «не словарная» или в имени есть цифры, дефис, www.
+         */
+        private fun isConvincingBareHost(host: String): Boolean {
+            if (host.substringAfterLast('.') in STRONG_BARE_TLDS) return true
+            if (host.startsWith("www.")) return true
+            return host.substringBeforeLast('.').any { it.isDigit() || it == '-' }
+        }
+
+        private val STRONG_BARE_TLDS = setOf("com", "net", "org", "ru", "su", "cn", "xyz", "onion", "tk", "ml", "ga", "cf", "gq", "pw")
 
         private fun looksLikePackageName(s: String): Boolean {
             val first = s.substringBefore('.')

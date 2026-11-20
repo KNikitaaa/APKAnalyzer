@@ -40,7 +40,25 @@ data class ContentsSummary(
     val packers: List<PackerMatch>,
     val hiddenPayloads: List<HiddenPayload>,
     val hasResourcesArsc: Boolean,
-)
+) {
+    /** Пути внутри части split APK помечаются её именем: `split_x.apk!lib/...`. */
+    fun prefixed(prefix: String) = copy(
+        dexFiles = dexFiles.map { prefix + it },
+        nativeLibraries = nativeLibraries.map { it.copy(path = prefix + it.path) },
+        packers = packers.map { it.copy(evidence = prefix + it.evidence) },
+        hiddenPayloads = hiddenPayloads.map { it.copy(path = prefix + it.path) },
+    )
+
+    operator fun plus(other: ContentsSummary) = ContentsSummary(
+        totalEntries = totalEntries + other.totalEntries,
+        dexFiles = dexFiles + other.dexFiles,
+        nativeLibraries = nativeLibraries + other.nativeLibraries,
+        abis = (abis + other.abis).toSortedSet(),
+        packers = (packers + other.packers).distinctBy { it.name },
+        hiddenPayloads = hiddenPayloads + other.hiddenPayloads,
+        hasResourcesArsc = hasResourcesArsc || other.hasResourcesArsc,
+    )
+}
 
 /**
  * Обзор содержимого архива: DEX, нативные библиотеки, известные упаковщики,

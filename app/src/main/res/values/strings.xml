@@ -3,19 +3,23 @@
     <string name="app_name">APK AI Analyzer</string>
 
     <!-- Главная -->
-    <string name="home_title">Проверка APK</string>
-    <string name="home_subtitle">Выберите APK-файл — приложение разберёт его прямо на телефоне.</string>
-    <string name="home_pick_apk">Выбрать APK</string>
-    <string name="home_history">История анализов</string>
-    <string name="home_settings">Настройки AI и приватность</string>
-    <string name="home_safety_title">Безопасно и локально</string>
-    <string name="home_safety_body">Файл не устанавливается и не запускается. Анализ выполняется на устройстве. В сеть может уйти только краткий набор фактов для AI-объяснения — и только после вашего подтверждения.</string>
-    <string name="home_limits_title">Что проверяется сейчас</string>
-    <string name="home_limits_body">SHA-256, пакет и версии Android, разрешения, компоненты, подпись, чувствительные API, сетевые адреса, нативные библиотеки и упаковщики.</string>
-    <string name="home_stage_note">Оценка риска строится по прозрачным правилам: для каждой причины видно доказательство. По желанию можно получить объяснение от AI — только с вашего согласия и без отправки самого APK.</string>
+    <string name="home_title">Проверка приложений</string>
+    <string name="home_subtitle">Узнайте, что APK умеет делать, прежде чем ставить его на телефон.</string>
+    <string name="home_pick_apk">Проверить APK-файл</string>
+    <string name="home_installed">Установленные приложения</string>
+    <string name="home_pick_body">APK, .apks, .xapk или .apkm. Файл не устанавливается и не запускается.</string>
+    <string name="home_installed_body">Проверить то, что уже стоит на телефоне, вместе со всеми частями split APK.</string>
+    <string name="home_recent">Недавние проверки</string>
+    <string name="home_all_history">Вся история</string>
+    <string name="home_how_title">Как это работает</string>
+    <string name="home_step1">Выберите APK-файл или приложение, которое уже установлено.</string>
+    <string name="home_step2">Приложение разбирает его прямо на телефоне: разрешения, код, подпись, сетевые адреса.</string>
+    <string name="home_step3">Вы получаете вердикт с доказательствами и подсказку, что делать дальше.</string>
+    <string name="home_privacy">Проверка идёт на телефоне. В сеть уходит только то, что вы подтвердите: факты для AI или хеш для VirusTotal.</string>
+    <string name="home_settings">Настройки</string>
 
     <!-- Анализ -->
-    <string name="analysis_title">Анализ</string>
+    <string name="analysis_title">Проверка</string>
     <string name="analysis_importing">Копирование файла во временную закрытую папку…</string>
     <string name="analysis_cancel">Отменить</string>
     <string name="analysis_cancelled">Анализ отменён</string>
@@ -27,8 +31,6 @@
     <string name="analysis_raw_title">Все найденные признаки</string>
 
     <!-- Оценка риска -->
-    <string name="risk_score">Балл риска: %1$d из 100</string>
-    <string name="risk_rules_version">Правила %1$s · полнота анализа %2$d%%</string>
     <string name="risk_evidence_title">Причины и доказательства (%1$d)</string>
     <string name="risk_no_findings">Ни одно правило не сработало.</string>
     <string name="risk_combination">связка признаков</string>
@@ -39,11 +41,19 @@
     <string name="a11y_collapsed">свёрнуто, нажмите, чтобы увидеть доказательства</string>
 
     <!-- Отчёт -->
+    <string name="risk_a11y">%1$s, балл %2$d из 100</string>
+    <string name="risk_of_100">из 100</string>
+    <string name="risk_rules_tag">Правила %1$s</string>
+    <string name="risk_coverage_tag">Полнота %1$d%%</string>
+    <string name="report_save_as">Сохранить как</string>
+    <string name="report_sarif_hint">SARIF — формат для систем безопасности: SOC, CI, DefectDojo.</string>
+    <string name="report_device_actions">Файл и приложение на телефоне</string>
+    <string name="analysis_checking">Проверяем</string>
+    <string name="analysis_offline_note">Файл не устанавливается и не запускается — всё происходит на телефоне.</string>
+    <string name="analysis_title_report">Отчёт</string>
     <string name="report_recommendations">Что делать</string>
     <string name="report_actions">Действия</string>
     <string name="report_open_pdf">Открыть PDF-отчёт</string>
-    <string name="report_export_pdf">Сохранить PDF</string>
-    <string name="report_export_json">Сохранить JSON</string>
     <string name="report_share">Поделиться PDF</string>
     <string name="report_saved">Отчёт сохранён</string>
     <string name="report_save_failed">Не удалось сохранить отчёт</string>
@@ -57,13 +67,65 @@
     <string name="report_file_delete_failed">Не удалось удалить файл</string>
     <string name="report_uninstall_app">Удалить установленное приложение</string>
     <string name="report_app_details">Открыть сведения о приложении</string>
-    <string name="report_installed_hint">Работает, если приложение с этим пакетом установлено. Удаление подтверждается в системном окне Android.</string>
+    <string name="report_installed_hint">Приложение с этим пакетом установлено на устройстве. Удаление подтверждается в системном окне Android.</string>
+    <string name="report_installed_system_hint">Это системное приложение: удалить его нельзя, но в сведениях о приложении его можно отключить или удалить обновления.</string>
+    <string name="report_installed_other_version">На устройстве установлена другая версия (%1$s) — она может отличаться от проверенного файла.</string>
+    <string name="report_app_uninstalled">Приложение удалено</string>
     <string name="report_limitations">Ограничения анализа</string>
     <string name="report_file_section">Файл и версии</string>
     <string name="report_file_name">Имя файла</string>
     <string name="report_file_size">Размер</string>
     <string name="report_date">Дата анализа</string>
     <string name="report_versions">Версии</string>
+
+    <!-- Репутация по хешу -->
+    <string name="reputation_title">Репутация по SHA-256</string>
+    <string name="reputation_intro">Можно узнать, знаком ли этот файл VirusTotal и что о нём думают антивирусы. Отправляется только хеш — не APK и не имя приложения. На локальную оценку это не влияет.</string>
+    <string name="reputation_check">Проверить хеш в VirusTotal</string>
+    <string name="reputation_recheck">Проверить ещё раз</string>
+    <string name="reputation_running">Запрос к VirusTotal…</string>
+    <string name="reputation_needs_key">Нужен бесплатный API-ключ VirusTotal — его можно добавить в настройках.</string>
+    <string name="reputation_open_settings">Открыть настройки</string>
+    <string name="reputation_open_link">Открыть страницу файла в VirusTotal</string>
+    <string name="reputation_counts">Вредоносным считают: %1$d, подозрительным: %2$d из %3$d антивирусов</string>
+    <string name="reputation_unknown_hint">Это не значит, что файл безопасен: его просто ещё никто не загружал в сервис.</string>
+    <string name="reputation_threat">Классификация: %1$s</string>
+    <string name="reputation_meta">%1$s · проверено %2$s</string>
+    <string name="reputation_last_scan">последнее сканирование %1$s</string>
+    <string name="reputation_separate">Внешний источник. Уровень риска выше рассчитан приложением локально и не меняется.</string>
+    <string name="reputation_consent_title">Отправить хеш в VirusTotal?</string>
+    <string name="reputation_consent_body">На %1$s уйдёт только SHA-256 файла (ниже). Сам APK, имя пакета и список приложений не отправляются.</string>
+    <string name="reputation_consent_send">Отправить хеш</string>
+
+    <!-- Установленные приложения -->
+    <string name="installed_title">Установленные приложения</string>
+    <string name="installed_search">Поиск по названию или пакету</string>
+    <string name="installed_show_system">Системные</string>
+    <string name="installed_analyze">Проверить</string>
+    <string name="installed_count">Приложений: %1$d</string>
+    <string name="installed_splits">частей APK: %1$d</string>
+    <string name="installed_empty">Ничего не найдено</string>
+    <string name="installed_error">Не удалось получить список приложений: %1$s</string>
+    <string name="installed_visibility_title">Видны не все приложения</string>
+    <string name="installed_visibility_body">Android 11+ ограничивает доступ к списку приложений. В этой сборке видны только приложения с иконкой на рабочем столе; фоновые сервисы без иконки здесь не показаны. Их можно проверить, выбрав APK-файл.</string>
+
+    <!-- Настройки: репутация -->
+    <string name="settings_reputation">Репутация по хешу (VirusTotal)</string>
+    <string name="settings_reputation_hint">Ключ выдаётся бесплатно после регистрации на virustotal.com (раздел API key). Хранится на телефоне в зашифрованном виде и используется только для запросов по SHA-256.</string>
+    <string name="settings_reputation_key">API-ключ VirusTotal</string>
+    <string name="settings_reputation_key_saved">Ключ сохранён.</string>
+    <string name="settings_reputation_key_missing">Ключ не задан.</string>
+    <string name="settings_reputation_save">Сохранить ключ</string>
+    <string name="settings_reputation_remove">Удалить ключ</string>
+
+    <!-- Настройки: пакеты правил -->
+    <string name="settings_rules">Правила оценки риска</string>
+    <string name="settings_rules_builtin">Встроенный набор правил %1$s</string>
+    <string name="settings_rules_pack">Пакет правил %1$s (действует: %2$s)</string>
+    <string name="settings_rules_problem">Сохранённый пакет не применён: %1$s</string>
+    <string name="settings_rules_hint">Пакет правил обновляет веса, пороги и списки (подозрительные домены, сервисы C2) без новой версии приложения. Принимаются только пакеты с подписью автора правил; более старая версия, чем уже установленная, не принимается. Версия правил записывается в каждый отчёт.</string>
+    <string name="settings_rules_load">Загрузить пакет правил (.rulepack)</string>
+    <string name="settings_rules_reset">Вернуть встроенные правила</string>
 
     <!-- Просмотр PDF -->
     <string name="pdf_preview_title">PDF-отчёт</string>

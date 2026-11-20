@@ -31,7 +31,7 @@ import com.apkanalyzer.rules.BehaviorCategory.SURVEILLANCE
  * Любое изменение правил или весов обязано менять VERSION — это записывается в отчёт.
  */
 object RuleCatalog {
-    const val VERSION = "2026.10.1"
+    const val VERSION = "2026.10.2"
 
     private fun hit(evidence: List<Evidence>, confidence: Float = 1f): Hit? =
         if (evidence.isEmpty()) null else Hit(evidence, confidence)
@@ -46,12 +46,9 @@ object RuleCatalog {
         vararg requires: Set<String>,
     ) = Rule(id, title, description, category, weight, RuleKind.COMBINATION, false, requires.toList())
 
-    private val SUSPICIOUS_TLDS = setOf(
-        "top", "xyz", "tk", "ml", "ga", "cf", "gq", "pw", "icu", "click", "link", "work", "cc", "su", "onion",
-        "buzz", "rest", "cyou", "monster", "lol", "sbs", "cfd", "zip", "mov",
-    )
-    private val DYNAMIC_DNS = listOf("duckdns.org", "no-ip.", "ddns.net", "ngrok", "serveo.net", "dynu.", "hopto.org", "zapto.org")
-    private val MESSENGER_C2 = listOf("api.telegram.org", "discord.com/api/webhooks", "discordapp.com/api/webhooks", "hooks.slack.com")
+    private val ROOT_COMMAND = Regex("""(^|[\s/;&|"'])su\s+(-c|0|root|--command|-mm)""")
+    private val ICON_HIDING_RULES = setOf("HIDE_ICON_API", "COMBO_STEALTH_PERSISTENCE", "COMBO_SPYWARE", "COMBO_SMS_STEALER", "COMBO_SMS_FRAUD")
+
     private val BOOT_ACTIONS = listOf(
         "android.intent.action.BOOT_COMPLETED", "android.intent.action.LOCKED_BOOT_COMPLETED",
         "android.intent.action.QUICKBOOT_POWERON", "com.htc.intent.action.QUICKBOOT_POWERON",
@@ -106,14 +103,24 @@ object RuleCatalog {
 
         // ---------------------------------------------------------------- Автозапуск и скрытность
         signal("BOOT_AUTOSTART", "Автозапуск при включении", "Приложение запускается само после перезагрузки телефона.", PERSISTENCE, 3) { f ->
-            val receivers = BOOT_ACTIONS.flatMap { f.componentsWithAction(it, ComponentType.RECEIVER) }.distinct()
+            // Приёмники библиотек (WorkManager перепланирует задачи после перезагрузки) — не автозапуск приложения.
+            val receivers = BOOT_ACTIONS.flatMap { f.componentsWithAction(it, ComponentType.RECEIVER) }.distinct().filterNot(f::isLibraryComponent)
             hit(if (receivers.isEmpty()) emptyList() else f.permissionEvidence("RECEIVE_BOOT_COMPLETED") + receivers.map { f.componentEvidence(it, "запуск при загрузке") })
         },
         signal("NO_LAUNCHER_ICON", "Нет иконки в меню", "У приложения нет значка для запуска — пользователь может не знать, что оно установлено.", PERSISTENCE, 10) { f ->
             if (f.manifest != null && !f.hasLauncher) Hit(listOf(Evidence(MANIFEST, "нет activity с MAIN + LAUNCHER"))) else null
         },
         signal("HIDE_ICON_API", "Скрытие значка из кода", "Код умеет отключать свои компоненты — так обычно прячут иконку после первого запуска.", PERSISTENCE, 6) { f ->
-            hit(f.apiEvidence(f.apis(ApiCategory.HIDE_ICON)))
+            val usages = f.apis(ApiCategory.HIDE_ICON)
+            if (usages.isEmpty()) return@signal null
+            // Сильный признак — код ссылается на собственную точку входа из лаунчера. Включение и отключение
+            // других компонентов (приёмников, share-целей) — обычная практика.
+            val launchers = f.launcherComponents.filter { it.name in f.componentsToggledByApp }
+            val strong = launchers.isNotEmpty() || !f.bytecodeAttributed
+            Hit(
+                f.apiEvidence(usages) + launchers.map { f.componentEvidence(it, "код ссылается на значок запуска") },
+                confidence = if (strong) 1f else 0.4f,
+            )
         },
 
         // ---------------------------------------------------------------- Загрузка кода
@@ -176,7 +183,14 @@ object RuleCatalog {
                 v == "su" || v.startsWith("su ") || v.contains(" su ") || v.contains("/su") || v.contains("su -c")
             }
             val paths = f.indicatorsOf(IndicatorType.SUSPICIOUS_PATH).filter { it.value.contains("magisk", true) || it.value.contains("/su", true) }
-            hit(f.indicatorEvidence(shell + paths))
+            // Команда с аргументами («su -c …») — попытка выполнить что-то с root. Голое «su» (это ещё и код
+            // сунданского языка), пути к su и упоминания Magisk типичны для *проверки* root банками и менеджерами паролей.
+            val command = shell.any { s ->
+                val v = s.value.lowercase()
+                ROOT_COMMAND.containsMatchIn(v)
+            }
+            val evidence = f.indicatorEvidence(shell + paths)
+            if (evidence.isEmpty()) null else Hit(evidence, confidence = if (command) 1f else 0.3f)
         },
         signal("SHELL_EXEC", "Выполнение shell-команд", "Код запускает системные команды.", PRIVILEGE, 5) { f ->
             val api = f.apis(ApiCategory.SHELL_EXEC)
@@ -193,16 +207,16 @@ object RuleCatalog {
             hit(f.permissionEvidence("INTERNET"))
         },
         signal("HARDCODED_PUBLIC_IP", "Зашитые IP-адреса", "В коде указаны публичные IP-адреса — серверы, к которым обращаются в обход DNS.", NETWORK, 5) { f ->
-            hit(f.indicatorEvidence(f.indicatorsOf(IndicatorType.IPV4).filter { !it.isPrivate }))
+            hit(f.indicatorEvidence(f.indicatorsOf(IndicatorType.IPV4).filter { !it.isPrivate && it.value !in f.params.publicDns }))
         },
         signal("SUSPICIOUS_DOMAINS", "Подозрительные домены", "Домены в зонах, популярных у злоумышленников, или динамический DNS.", NETWORK, 6) { f ->
-            hit(f.indicatorEvidence(f.indicatorsOf(IndicatorType.DOMAIN).filter { d ->
-                d.value.substringAfterLast('.') in SUSPICIOUS_TLDS || DYNAMIC_DNS.any { d.value.contains(it) }
+            hit(f.indicatorEvidence(f.indicatorsOf(IndicatorType.DOMAIN, includeLibraries = true).filter { d ->
+                d.value.substringAfterLast('.') in f.params.suspiciousTlds || f.params.dynamicDns.any { d.value.contains(it) }
             }))
         },
         signal("C2_MESSENGER_API", "Отправка данных через мессенджер", "Адрес API Telegram-бота или вебхука Discord/Slack — частый способ слива украденных данных.", NETWORK, 10) { f ->
             hit(f.indicatorEvidence(f.indicators.filter { i ->
-                (i.type == IndicatorType.URL || i.type == IndicatorType.DOMAIN) && MESSENGER_C2.any { i.value.contains(it, ignoreCase = true) }
+                (i.type == IndicatorType.URL || i.type == IndicatorType.DOMAIN) && f.params.messengerC2.any { i.value.contains(it, ignoreCase = true) }
             }))
         },
 
@@ -249,13 +263,22 @@ object RuleCatalog {
             setOf("NO_LAUNCHER_ICON", "HIDE_ICON_API"), setOf("BOOT_AUTOSTART")),
         combo("COMBO_OTP_INTERCEPT", "Перехват кодов подтверждения", "Читает уведомления и выходит в сеть вместе с доступом к SMS, специальными возможностями или отправкой через мессенджер.", SURVEILLANCE, 40,
             setOf("NOTIFICATION_LISTENER"), setOf("NET_INTERNET"), setOf("SMS_READ", "ACCESSIBILITY_SERVICE", "C2_MESSENGER_API")),
-        combo("COMBO_ROOT_TOOLKIT", "Набор для получения root", "Команды root вместе с выполнением shell-команд или скрытым исполняемым кодом.", PRIVILEGE, 30,
-            setOf("ROOT_COMMANDS"), setOf("SHELL_EXEC", "HIDDEN_PAYLOAD", "HIDDEN_PAYLOAD_DISGUISED")),
-        combo("COMBO_DATA_EXFIL", "Сбор и отправка личных данных", "Собирает SMS, контакты, звонки или идентификаторы и содержит адреса подозрительных серверов.", DATA_COLLECTION, 30,
+        combo("COMBO_ROOT_TOOLKIT", "Набор для получения root", "Команды root вместе со спрятанным исполняемым файлом — так устроены эксплойты и руткиты.", PRIVILEGE, 40,
+            setOf("ROOT_COMMANDS"), setOf("HIDDEN_PAYLOAD", "HIDDEN_PAYLOAD_DISGUISED")),
+        combo("COMBO_SMS_INTERCEPT_EXFIL", "Перехват SMS с отправкой на сервер", "Читает входящие SMS и содержит адрес подозрительного сервера или бота мессенджера — так крадут коды подтверждения.", SMS_CALLS, 45,
+            setOf("SMS_READ"), setOf("C2_MESSENGER_API", "SUSPICIOUS_DOMAINS", "HARDCODED_PUBLIC_IP")),
+        combo("COMBO_DATA_EXFIL", "Сбор и отправка личных данных", "Собирает SMS, контакты, звонки или идентификаторы и содержит адреса подозрительных серверов.", DATA_COLLECTION, 40,
             setOf("SMS_READ", "CONTACTS_ACCOUNTS", "DEVICE_IDS", "CALLS_ACCESS"), setOf("C2_MESSENGER_API", "SUSPICIOUS_DOMAINS", "HARDCODED_PUBLIC_IP")),
     )
 
     val mitigations: List<Mitigation> = listOf(
+        Mitigation(
+            "MIT_ICON_SWITCHER", "У приложения несколько значков на выбор (activity-alias) — компоненты переключаются для смены иконки", 0.3f,
+            appliesTo = { it.id in ICON_HIDING_RULES },
+        ) { f ->
+            f.launcherComponents.takeIf { it.size >= 2 && it.any { c -> c.type == ComponentType.ACTIVITY_ALIAS } }
+                ?.let { list -> Evidence(MANIFEST, "значков запуска: ${list.size} (${list.joinToString { it.name.substringAfterLast('.') }})") }
+        },
         Mitigation(
             "MIT_DEFAULT_SMS_APP", "Похоже на SMS-клиент: может быть назначено приложением для SMS по умолчанию", 0.3f,
             appliesTo = { it.category == SMS_CALLS },
@@ -294,5 +317,5 @@ object RuleCatalog {
     /** Публичная проверка доменов — используется и в других местах (например, в AI-модуле). */
     fun isSuspiciousDomain(domain: String): Boolean =
         IndicatorExtractor.isPlausibleDomain(domain) &&
-            (domain.substringAfterLast('.') in SUSPICIOUS_TLDS || DYNAMIC_DNS.any { domain.contains(it) })
+            (domain.substringAfterLast('.') in RuleParams.DEFAULT.suspiciousTlds || RuleParams.DEFAULT.dynamicDns.any { domain.contains(it) })
 }
