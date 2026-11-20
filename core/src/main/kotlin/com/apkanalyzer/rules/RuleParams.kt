@@ -20,6 +20,8 @@ data class RuleParams(
     val publicDns: Set<String>,
     /** Адреса мессенджеров, которые используют как канал слива данных (подстроки). */
     val messengerC2: List<String>,
+    /** Проверенные эталоны сертификатов известных приложений. */
+    val trustedSigners: Map<String, TrustedSigner> = BuiltinSigners.ALL,
 ) {
     fun weightOf(rule: Rule): Int = weightOverrides[rule.id] ?: rule.weight
 

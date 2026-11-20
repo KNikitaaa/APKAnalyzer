@@ -4,7 +4,9 @@ import com.apkanalyzer.analyzer.AnalysisLimits
 import com.apkanalyzer.analyzer.MalformedApkException
 import com.apkanalyzer.analyzer.archive.SafeApkArchive
 import com.apkanalyzer.analyzer.util.LeBytes
+import com.android.apksig.ApkVerifier
 import java.io.ByteArrayInputStream
+import java.io.File
 import java.security.MessageDigest
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -38,6 +40,8 @@ data class SignatureInfo(
     val schemes: Set<SignatureScheme>,
     val certificates: List<CertificateInfo>,
     val warnings: List<String>,
+    /** Сертификаты, для которых проверена подпись всего APK, а не только прочитан блок сертификата. */
+    val verifiedSignerFingerprints: Set<String> = emptySet(),
 ) {
     val isSigned: Boolean get() = schemes.isNotEmpty()
 }
@@ -45,12 +49,13 @@ data class SignatureInfo(
 /**
  * Извлекает сведения о подписи APK: какие схемы подписи присутствуют и какими сертификатами подписан файл.
  *
- * Важно: криптографическая проверка подписи здесь не выполняется — мы сообщаем, *кем заявлена* подпись.
- * Целостность APK проверит сам Android при установке; для оценки риска важны сертификат и схема.
+ * Извлечение сертификатов показывает, кем заявлена подпись. Если передан исходный файл,
+ * ApkVerifier отдельно проверяет подпись всего APK; только этот результат можно использовать
+ * как доказательство подлинности для локального каталога разработчиков.
  */
 class SignatureInspector(private val limits: AnalysisLimits = AnalysisLimits()) {
 
-    fun inspect(archive: SafeApkArchive): SignatureInfo {
+    fun inspect(archive: SafeApkArchive, apkFile: File? = null): SignatureInfo {
         val warnings = mutableListOf<String>()
         val found = LinkedHashMap<String, Pair<X509Certificate, MutableSet<SignatureScheme>>>()
         val schemes = LinkedHashSet<SignatureScheme>()
@@ -105,7 +110,14 @@ class SignatureInspector(private val limits: AnalysisLimits = AnalysisLimits()) 
         }
 
         val certificates = found.map { (fp, pair) -> describe(pair.first, fp, pair.second) }
-        return SignatureInfo(schemes, certificates, warnings)
+        val verifiedSigners = if (apkFile != null) try {
+            val result = ApkVerifier.Builder(apkFile).build().verify()
+            if (result.isVerified) result.signerCertificates.mapTo(LinkedHashSet()) { sha256(it.encoded) }
+            else emptySet()
+        } catch (_: Exception) {
+            emptySet()
+        } else emptySet()
+        return SignatureInfo(schemes, certificates, warnings, verifiedSigners)
     }
 
     /** Возвращает пары (ID, значение) из APK Signing Block или null, если блока нет. */

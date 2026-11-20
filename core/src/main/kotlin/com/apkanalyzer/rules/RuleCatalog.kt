@@ -31,7 +31,7 @@ import com.apkanalyzer.rules.BehaviorCategory.SURVEILLANCE
  * Любое изменение правил или весов обязано менять VERSION — это записывается в отчёт.
  */
 object RuleCatalog {
-    const val VERSION = "2026.11.1"
+    const val VERSION = "2026.11.2"
 
     private fun hit(evidence: List<Evidence>, confidence: Float = 1f): Hit? =
         if (evidence.isEmpty()) null else Hit(evidence, confidence)
@@ -48,6 +48,11 @@ object RuleCatalog {
 
     private val ROOT_COMMAND = Regex("""(^|[\s/;&|"'])su\s+(-c|0|root|--command|-mm)""")
     private val ICON_HIDING_RULES = setOf("HIDE_ICON_API", "COMBO_STEALTH_PERSISTENCE", "COMBO_SPYWARE", "COMBO_SMS_STEALER", "COMBO_SMS_FRAUD")
+    private val ORDINARY_CAPABILITIES = setOf(
+        "MIC_RECORD", "CAMERA_ACCESS", "LOCATION_ANY", "SCREEN_CAPTURE", "CONTACTS_ACCOUNTS",
+        "DEVICE_IDS", "CLIPBOARD_READ", "BOOT_AUTOSTART", "HIDE_ICON_API", "DYNAMIC_CODE",
+        "INSTALL_PACKAGES", "OVERLAY_WINDOWS", "HEAVY_OBFUSCATION", "SHELL_EXEC",
+    )
 
     private val BOOT_ACTIONS = listOf(
         "android.intent.action.BOOT_COMPLETED", "android.intent.action.LOCKED_BOOT_COMPLETED",
@@ -272,6 +277,14 @@ object RuleCatalog {
     )
 
     val mitigations: List<Mitigation> = listOf(
+        Mitigation(
+            "MIT_VERIFIED_DEVELOPER", "Подпись APK проверена и совпадает с известным сертификатом разработчика", 0.25f,
+            appliesTo = { it.id in ORDINARY_CAPABILITIES },
+        ) { f ->
+            f.signerCheck.takeIf { it.verdict == SignerVerdict.OFFICIAL }?.let { check ->
+                Evidence(ApkFacts.SIGNATURE, "${check.signer!!.displayDeveloper}: ${f.report.signature!!.verifiedSignerFingerprints.joinToString()}")
+            }
+        },
         Mitigation(
             "MIT_ICON_SWITCHER", "У приложения несколько значков на выбор (activity-alias) — компоненты переключаются для смены иконки", 0.3f,
             appliesTo = { it.id in ICON_HIDING_RULES },

@@ -20,6 +20,7 @@ class ApkFacts(val report: ApkAnalysisReport, val params: RuleParams = RuleParam
     val manifest = report.manifest
     val packageName: String = manifest?.packageName.orEmpty()
     val targetSdk: Int? = manifest?.targetSdk
+    val signerCheck: SignerCheck = TrustedSigners.check(manifest?.packageName, report.signature, params.trustedSigners)
 
     /** Разрешения в коротком виде (`READ_SMS`), плюс полные имена для нестандартных. */
     val permissions: Set<String> = manifest?.permissionNames.orEmpty()

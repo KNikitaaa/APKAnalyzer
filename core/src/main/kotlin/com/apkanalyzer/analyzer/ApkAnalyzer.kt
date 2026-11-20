@@ -163,7 +163,7 @@ class ApkAnalyzer(
             // 5. Подпись
             step(AnalysisStage.SIGNATURE)
             val signature: SignatureInfo? = runStage(stages, AnalysisStage.SIGNATURE) {
-                val s = SignatureInspector(limits).inspect(zip)
+                val s = SignatureInspector(limits).inspect(zip, container?.base?.file ?: file)
                 s to s.warnings.firstOrNull()
             }
 

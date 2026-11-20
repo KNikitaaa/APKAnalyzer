@@ -158,7 +158,7 @@ class RulePackTest {
     fun shippedExamplePackIsSignedByTrustedKey() {
         val text = javaClass.getResource("/rulepacks/example.rulepack")!!.readText()
         val p = RulePackVerifier().verify(text)
-        assertEquals("2026.11.2", p.version)
+        assertEquals("2026.11.3", p.version)
         assertTrue("trycloudflare.com" in p.toParams().dynamicDns)
     }
 
